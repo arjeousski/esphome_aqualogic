@@ -196,6 +196,64 @@ button:
 
 ---
 
+## Reference Tables: Keys, States, and Mappings
+
+To configure key emulation and status monitoring, use the following tables as a reference for available keys, state flags, and confirmation rules.
+
+### 1. Available Keys
+These keys can be passed as the `key` argument to either `aqualogic.send` or `aqualogic.toggle` actions:
+
+| Key String | Internal Constant | Type | Description |
+| :--- | :--- | :--- | :--- |
+| `MENU` | `KEY_MENU` | Standard | Menu button navigation |
+| `LEFT` | `KEY_LEFT` | Standard | Left arrow navigation |
+| `RIGHT` | `KEY_RIGHT` | Standard | Right arrow navigation |
+| `PLUS` | `KEY_PLUS` | Standard | Plus (`+`) button navigation |
+| `MINUS` | `KEY_MINUS` | Standard | Minus (`-`) button navigation |
+| `FILTER` | `KEY_FILTER` | Standard | Filter pump button |
+| `LIGHTS` | `KEY_LIGHTS` | Standard | Lights button |
+| `POOL_SPA` | `KEY_POOL_SPA` | Standard | Pool / Spa mode button |
+| `VALVE_3` | `KEY_VALVE_3` | Wireless | Valve 3 (Waterfall) button |
+| `VALVE_4` | `KEY_VALVE_4` | Wireless | Valve 4 button |
+| `HEATER_1` | `KEY_HEATER_1` | Wireless | Heater auto button |
+| `SERVICE` | `KEY_SERVICE` | Standard | Service button (on panel) |
+| `AUX_1` - `AUX_7` | `KEY_AUX_1` - `KEY_AUX_7` | Standard | Aux 1 to Aux 7 buttons |
+| `AUX_8` - `AUX_14` | `KEY_AUX_8` - `KEY_AUX_14` | Wireless | Aux 8 to Aux 14 buttons |
+
+### 2. Available States (Flags)
+These boolean flags are broadcasted by the controller and map to status sensors or binary sensors:
+
+| Flag Constant | Sensor Platform / Type | Description |
+| :--- | :--- | :--- |
+| `FILTER` | Binary Sensor | Filter pump status (active/idle) |
+| `LIGHTS` | Binary Sensor | Lights status (on/off) |
+| `HEATER_AUTO` | Binary Sensor | Heater scheduler / auto mode (enabled/disabled) |
+| `HEATER_1` | Binary Sensor | Heater firing status (actively heating) |
+| `VALVE_3` | Binary Sensor | Valve 3 / Waterfall status (open/closed) |
+| `VALVE_4` | Binary Sensor | Valve 4 status (open/closed) |
+| `CHECK_SYSTEM` | Binary Sensor | System check status warning LED (active/clear) |
+| `POOL` | Internal State | Pool mode state active |
+| `SPA` | Internal State | Spa mode state active |
+| `SERVICE` | Internal State | Service mode state active |
+| `SPILLOVER` | Internal State | Spillover mode state active |
+| `SYSTEM_OFF` | Internal State | System power off state |
+| `SUPER_CHLORINATE` | Internal State | Super chlorination mode state |
+| `IS_METRIC` | Internal State | Metric temperature unit state |
+| `AUX_1` - `AUX_14` | Internal State | Aux channel 1 to 14 active flags |
+
+### 3. Toggle Mappings for Confirmation (`aqualogic.toggle`)
+For keys that support state confirmation, the retry mechanism monitors the corresponding status flag. If a key is sent using `aqualogic.toggle` but is not in this table, it will fall back to a standard fire-and-forget command (equivalent to `aqualogic.send`).
+
+| Key Command | Mapped Status Flag | Confirmation Behavior |
+| :--- | :--- | :--- |
+| `FILTER` | `FILTER` | Verifies filter pump status changed |
+| `LIGHTS` | `LIGHTS` | Verifies lights status changed |
+| `VALVE_3` | `VALVE_3` | Verifies Valve 3 / Waterfall status changed |
+| `VALVE_4` | `VALVE_4` | Verifies Valve 4 status changed |
+| `HEATER_1` | `HEATER_AUTO` | Verifies Heater Auto state changed |
+
+---
+
 ## How It Works
 
 ### Key Emulation: Send vs Toggle Actions
@@ -207,7 +265,7 @@ The component exposes two distinct actions for transmitting panel commands over 
 - **How it works**: Transmits the key event frame over the RS-485 line exactly once. Because navigation keys do not correspond to a single binary state flag on the panel (e.g., pressing `MENU` doesn't switch on a physical status LED), the component does not listen for confirmation or attempt auto-retries.
 
 #### 2. `aqualogic.toggle` (Confirmed with Auto-Retries)
-- **Use Case**: Equipment toggles (`FILTER`, `LIGHTS`, `HEATER_1`, `VALVE_3`).
+- **Use Case**: Equipment toggles (`FILTER`, `LIGHTS`, `HEATER_1`, `VALVE_3`, `VALVE_4`).
 - **How it works**:
   1. Records the **initial state** of the corresponding feature flag.
   2. Transmits the key event frame.

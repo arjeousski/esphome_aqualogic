@@ -8,7 +8,10 @@ static const char *TAG = "aqualogic.component";
 
 // Key to flag mapping definition
 const std::unordered_map<CONTROLLER_KEYS, CONTROLLER_FLAGS> AquaLogicComponent::key_to_flag_map_ = {
+    {KEY_FILTER, FILTER},
     {KEY_LIGHTS, LIGHTS},
+    {KEY_VALVE_3, VALVE_3},
+    {KEY_VALVE_4, VALVE_4},
     {KEY_HEATER_1, HEATER_AUTO}
 };
 
