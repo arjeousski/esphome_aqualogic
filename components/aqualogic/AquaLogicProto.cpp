@@ -8,8 +8,6 @@ namespace esphome
 
         AquaLogicProto::AquaLogicProto()
         {
-            //pinMode(14, OUTPUT);    // sets the digital pin 13 as output
-
         }
 
         size_t AquaLogicProto::ReadFrame(esphome::uart::UARTDevice &port, byte buffer[], int maxLength, bool &complete)
@@ -80,9 +78,6 @@ namespace esphome
                     if (ch == FRAME_ETX)
                     {
                         done = true;
-                        //digitalWrite(14, HIGH); 
-                        //delayMicroseconds(10);
-                        //digitalWrite(14, LOW); 
 
                         _stats.last_packet_received_ms = millis();
                     }

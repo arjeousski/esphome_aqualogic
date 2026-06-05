@@ -145,18 +145,12 @@ void AquaLogicComponent::send_key(CONTROLLER_KEYS key) {
 }
 
 void AquaLogicComponent::setup() {    
-    pinMode(25, OUTPUT);    // sets the digital pin 13 as output
-
-
-    //Tweek the fifo settings
+    // Tweak the fifo settings
     // Hardware specific uart config removed for ESPHome 2024.4+ compatibility
     aqua_ = new AquaLogicProto();
 }
 
 void AquaLogicComponent::loop() {
-            digitalWrite(25, HIGH); 
-
-
     // Handle pending key retries
     handle_key_retry_();
 
@@ -281,8 +275,6 @@ void AquaLogicComponent::loop() {
             }            
         }
     }
-
-    digitalWrite(25, LOW); 
 }
 
 void AquaLogicComponent::dump_config(){
