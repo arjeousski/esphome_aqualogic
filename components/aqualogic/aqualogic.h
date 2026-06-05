@@ -16,8 +16,10 @@
 #endif
 
 
+#ifdef USE_ESP32
 #include "driver/uart.h"
 #include "soc/uart_reg.h"
+#endif
 #include "esphome/core/log.h"
 #include "AquaLogicProto.h"
 #include <unordered_map>

@@ -145,8 +145,10 @@ void AquaLogicComponent::send_key(CONTROLLER_KEYS key) {
 }
 
 void AquaLogicComponent::setup() {    
-    // Tweak the fifo settings
-    // Hardware specific uart config removed for ESPHome 2024.4+ compatibility
+    // Tweak the hardware FIFO thresholds for immediate frame retrieval
+    this->set_rx_full_threshold(8);
+    this->set_rx_timeout(1);
+
     aqua_ = new AquaLogicProto();
 }
 
