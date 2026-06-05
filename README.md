@@ -8,8 +8,8 @@ This custom ESPHome component interfaces with **Hayward/Goldline AquaLogic and P
 ## Features
 
 - **Sensors**: Monitor pool temperature, spa temperature, air temperature, pump speed, pump power, salt level, and chlorinator percentages.
-- **Binary Sensors**: Track real-time status of the filter pump, lights, heater (actively firing), heater auto mode (enabled), waterfall (valve 3), and system warning alarms (Check System).
-- **Text Sensors**: Mirror display line 1, display line 2, and active controller flags.
+- **Binary Sensors**: Track real-time status of the filter pump (solid/High speed), filter pump low speed (blinking/Low speed), lights, heater (actively heating), heater waiting/idle mode (blinking), waterfall (valve 3), system warning alarms (Check System - solid), and flashing warnings (Check System - blinking).
+- **Text Sensors**: Mirror display line 1, display line 2, and active controller flags. Characters that are set to blink on the physical LCD display are automatically enclosed in square brackets (e.g. `[Check System]`) in the text sensors.
 - **Controls (Buttons)**: Emulate physical key presses for panel navigation (`Menu`, `Left`, `Right`, `Plus`, `Minus`) and toggle pool functions (`Filter`, `Lights`, `Heater (auto)`, `Waterfall`).
 - **Heater Scheduler**: Configurable allowed run-windows with automatic timezone synchronization.
 
@@ -117,15 +117,22 @@ binary_sensor:
       name: "Lights Status"
     filter:
       name: "Filter Status"
+    filter_low_speed:
+      name: "Filter Low Speed Status"
     heater_auto:
       id: heater_auto
       name: "Heater Auto Status"
     heater_1:
       name: "Heater Status"
+    heater_blinking:
+      name: "Heater Waiting Status"
     valve_3:
       name: "Waterfall Status"
     check_system:
       name: "Check System Warning"
+      device_class: problem
+    check_system_blinking:
+      name: "Check System Warning Flashing"
       device_class: problem
 
 # Emulate buttons/controls
@@ -225,13 +232,16 @@ These boolean flags are broadcasted by the controller and map to status sensors 
 
 | Flag Constant | Sensor Platform / Type | Description |
 | :--- | :--- | :--- |
-| `FILTER` | Binary Sensor | Filter pump status (active/idle) |
+| `FILTER` | Binary Sensor | Filter pump status - High Speed (active/idle) |
+| `FILTER_LOW_SPEED` | Binary Sensor | Filter pump status - Low Speed (active/idle) |
 | `LIGHTS` | Binary Sensor | Lights status (on/off) |
 | `HEATER_AUTO` | Binary Sensor | Heater scheduler / auto mode (enabled/disabled) |
 | `HEATER_1` | Binary Sensor | Heater firing status (actively heating) |
+| `HEATER_BLINKING` | Binary Sensor | Heater waiting / idle status (active/idle) |
 | `VALVE_3` | Binary Sensor | Valve 3 / Waterfall status (open/closed) |
 | `VALVE_4` | Binary Sensor | Valve 4 status (open/closed) |
 | `CHECK_SYSTEM` | Binary Sensor | System check status warning LED (active/clear) |
+| `CHECK_SYSTEM_BLINKING` | Binary Sensor | System check flashing warning LED (active/clear) |
 | `POOL` | Internal State | Pool mode state active |
 | `SPA` | Internal State | Spa mode state active |
 | `SERVICE` | Internal State | Service mode state active |

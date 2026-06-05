@@ -19,6 +19,9 @@ CONF_SENSOR_LIGHTS = "lights"
 CONF_SENSOR_VALVE_3 = "valve_3"
 CONF_SENSOR_VALVE_4 = "valve_4"
 CONF_SENSOR_CHECK_SYSTEM = "check_system"
+CONF_SENSOR_FILTER_LOW_SPEED = "filter_low_speed"
+CONF_SENSOR_HEATER_BLINKING = "heater_blinking"
+CONF_SENSOR_CHECK_SYSTEM_BLINKING = "check_system_blinking"
 
 
 CONFIG_SCHEMA = cv.Schema(
@@ -31,7 +34,9 @@ CONFIG_SCHEMA = cv.Schema(
         cv.Optional(CONF_SENSOR_VALVE_3): binary_sensor.binary_sensor_schema(),
         cv.Optional(CONF_SENSOR_VALVE_4): binary_sensor.binary_sensor_schema(),
         cv.Optional(CONF_SENSOR_CHECK_SYSTEM): binary_sensor.binary_sensor_schema(),
-
+        cv.Optional(CONF_SENSOR_FILTER_LOW_SPEED): binary_sensor.binary_sensor_schema(),
+        cv.Optional(CONF_SENSOR_HEATER_BLINKING): binary_sensor.binary_sensor_schema(),
+        cv.Optional(CONF_SENSOR_CHECK_SYSTEM_BLINKING): binary_sensor.binary_sensor_schema(),
     }
 )
 
@@ -57,5 +62,8 @@ async def to_code(config):
     await setup_sensor(config, CONF_SENSOR_VALVE_3, server.set_binary_valve_3)
     await setup_sensor(config, CONF_SENSOR_VALVE_4, server.set_binary_valve_4)
     await setup_sensor(config, CONF_SENSOR_CHECK_SYSTEM, server.set_binary_check_system)
+    await setup_sensor(config, CONF_SENSOR_FILTER_LOW_SPEED, server.set_binary_filter_low_speed)
+    await setup_sensor(config, CONF_SENSOR_HEATER_BLINKING, server.set_binary_heater_blinking)
+    await setup_sensor(config, CONF_SENSOR_CHECK_SYSTEM_BLINKING, server.set_binary_check_system_blinking)
 
 

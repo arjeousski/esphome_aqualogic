@@ -513,16 +513,41 @@ namespace esphome
             bool changed = false;
             for (size_t i = 0; i < (sizeof(_leds) / sizeof(_leds[0])); i++)
             {
-                if (_leds[i] & states && !_flags[i])
+                bool is_solid = (states & _leds[i]) != 0;
+                if (is_solid && !_flags[i])
                 {
                     _flags[i] = true;
                     changed = true;
                 }
-                else if (!(_leds[i] & states) && _flags[i])
+                else if (!is_solid && _flags[i])
                 {
                     _flags[i] = false;
                     changed = true;
                 }
+            }
+
+            // FILTER_LOW_SPEED (index 29) -> Filter LED is blinking (index 5)
+            bool filter_low = (blink_states & _leds[5]) != 0;
+            if (filter_low != _flags[FILTER_LOW_SPEED])
+            {
+                _flags[FILTER_LOW_SPEED] = filter_low;
+                changed = true;
+            }
+
+            // HEATER_BLINKING (index 30) -> Heater LED is blinking (index 0)
+            bool heater_blink = (blink_states & _leds[0]) != 0;
+            if (heater_blink != _flags[HEATER_BLINKING])
+            {
+                _flags[HEATER_BLINKING] = heater_blink;
+                changed = true;
+            }
+
+            // CHECK_SYSTEM_BLINKING (index 31) -> Check System LED is blinking (index 2)
+            bool check_sys_blink = (blink_states & _leds[2]) != 0;
+            if (check_sys_blink != _flags[CHECK_SYSTEM_BLINKING])
+            {
+                _flags[CHECK_SYSTEM_BLINKING] = check_sys_blink;
+                changed = true;
             }
 
             return changed;

@@ -18,6 +18,35 @@ const std::unordered_map<CONTROLLER_KEYS, CONTROLLER_FLAGS> AquaLogicComponent::
 // Forward declarations
 void dataChanged(AquaLogicProto &obj);
 
+static std::string trim(const std::string &str) {
+    size_t first = str.find_first_not_of(" \t\r\n");
+    if (first == std::string::npos) {
+        return "";
+    }
+    size_t last = str.find_last_not_of(" \t\r\n");
+    return str.substr(first, (last - first + 1));
+}
+
+static std::string format_display_line(const std::string &raw_line, const bool blink_states[20]) {
+    std::string formatted = "";
+    bool in_blink = false;
+    for (size_t i = 0; i < raw_line.length() && i < 20; i++) {
+        bool char_blinks = blink_states[i];
+        if (char_blinks && !in_blink) {
+            formatted += '[';
+            in_blink = true;
+        } else if (!char_blinks && in_blink) {
+            formatted += ']';
+            in_blink = false;
+        }
+        formatted += raw_line[i];
+    }
+    if (in_blink) {
+        formatted += ']';
+    }
+    return trim(formatted);
+}
+
 // New key retry functionality
 void AquaLogicComponent::send_key_with_retry(CONTROLLER_KEYS key) {
     // First check if this key is in our map
@@ -258,6 +287,12 @@ void AquaLogicComponent::loop() {
 
                     if (this->binary_check_system_)
                         this->binary_check_system_->publish_state(aqua_->GetFlag(CHECK_SYSTEM));
+                    if (this->binary_filter_low_speed_)
+                        this->binary_filter_low_speed_->publish_state(aqua_->GetFlag(FILTER_LOW_SPEED));
+                    if (this->binary_heater_blinking_)
+                        this->binary_heater_blinking_->publish_state(aqua_->GetFlag(HEATER_BLINKING));
+                    if (this->binary_check_system_blinking_)
+                        this->binary_check_system_blinking_->publish_state(aqua_->GetFlag(CHECK_SYSTEM_BLINKING));
                     #endif
                 }
 
@@ -266,11 +301,13 @@ void AquaLogicComponent::loop() {
                     struct display_state_t display = aqua_->GetDisplay();
 
                     if (this->text_display1_) {
-                        this->text_display1_->publish_state(display.line1.c_str());   
+                        std::string formatted = format_display_line(display.raw_line1.c_str(), display.line1_blink_state);
+                        this->text_display1_->publish_state(formatted);   
                     }                        
 
                     if (this->text_display2_) {
-                        this->text_display2_->publish_state(display.line2.c_str());   
+                        std::string formatted = format_display_line(display.raw_line2.c_str(), display.line2_blink_state);
+                        this->text_display2_->publish_state(formatted);   
                     }
                     #endif
                 }

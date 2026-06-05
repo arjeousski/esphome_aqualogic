@@ -91,7 +91,9 @@ namespace esphome
             void set_binary_valve_3(BinarySensor *sensor) { this->binary_valve_3_ = sensor; }
             void set_binary_valve_4(BinarySensor *sensor) { this->binary_valve_4_ = sensor; }
             void set_binary_check_system(BinarySensor *sensor) { this->binary_check_system_ = sensor; }
-
+            void set_binary_filter_low_speed(BinarySensor *sensor) { this->binary_filter_low_speed_ = sensor; }
+            void set_binary_heater_blinking(BinarySensor *sensor) { this->binary_heater_blinking_ = sensor; }
+            void set_binary_check_system_blinking(BinarySensor *sensor) { this->binary_check_system_blinking_ = sensor; }
             #endif
 
         protected:
@@ -123,6 +125,9 @@ namespace esphome
             BinarySensor *binary_valve_3_{nullptr};
             BinarySensor *binary_valve_4_{nullptr};
             BinarySensor *binary_check_system_{nullptr};
+            BinarySensor *binary_filter_low_speed_{nullptr};
+            BinarySensor *binary_heater_blinking_{nullptr};
+            BinarySensor *binary_check_system_blinking_{nullptr};
             #endif
             // Local variables
             AquaLogicProto *aqua_{nullptr};

@@ -86,6 +86,9 @@ namespace esphome
       IS_METRIC,
       HEATER_AUTO,
       CHECK_SYSTEM_MSG,
+      FILTER_LOW_SPEED,
+      HEATER_BLINKING,
+      CHECK_SYSTEM_BLINKING,
       NUM_FLAGS
     };
 
@@ -119,6 +122,9 @@ namespace esphome
         "IS_METRIC",
         "HEATER_AUTO",
         "CHECK_SYSTEM_MSG",
+        "FILTER_LOW_SPEED",
+        "HEATER_BLINKING",
+        "CHECK_SYSTEM_BLINKING",
         "NUM_FLAGS"};
 
     enum CONTROLLER_KEYS : unsigned long
