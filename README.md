@@ -42,22 +42,23 @@ To connect your ESP32/ESP8266 to the AquaLogic controller, you need:
 
 ## Installation
 
-To use this component in your ESPHome configuration, you can reference it either directly from your Git repository (ideal for sharing and production) or as a local component (great for development).
+To use this component in your ESPHome configuration, you can reference it either directly from the GitHub repository (ideal for production) or as a local component (great for development).
 
 ### 1. Remote installation (via Git)
-Add the following to your ESPHome configuration file, replacing the URL with your GitLab repository:
+Add the following to your ESPHome configuration file:
 
 ```yaml
 external_components:
   - source:
       type: git
-      url: https://gitlab.com/your-username/aqualogic-esphome.git
+      url: https://github.com/arjeousski/esphome_aqualogic.git
       # Optional: specify a branch, tag, or commit ref
       # ref: main
+    components: [ aqualogic ]
 ```
 
 ### 2. Local installation
-Copy the `aqualogic` folder into the `external_components` directory of your ESPHome project, then reference it locally:
+Copy the `components/aqualogic` folder into the `external_components` directory of your ESPHome project, then reference it locally:
 
 ```yaml
 external_components:
