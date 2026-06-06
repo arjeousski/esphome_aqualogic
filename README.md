@@ -78,9 +78,17 @@ uart:
   rx_pin: 26
   baud_rate: 19200
   stop_bits: 2
+  # ESP32 FIFO optimizations for immediate frame retrieval
+  rx_full_threshold: 8
+  rx_timeout: 1
 
 # Initialize AquaLogic base component
 aqualogic:
+
+> [!TIP]
+> **UART Optimization Settings (`rx_full_threshold` & `rx_timeout`)**:
+> On ESP32 controllers, configuring `rx_full_threshold: 8` and `rx_timeout: 1` under the `uart` component triggers hardware receive interrupts for smaller chunks of incoming data immediately, rather than waiting for the default buffer fill. This ensures lowest latency for real-time LCD display replication.
+
 
 # Expose sensors
 sensor:
