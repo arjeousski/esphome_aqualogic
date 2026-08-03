@@ -22,6 +22,13 @@ CONF_SENSOR_CHECK_SYSTEM = "check_system"
 CONF_SENSOR_FILTER_LOW_SPEED = "filter_low_speed"
 CONF_SENSOR_HEATER_BLINKING = "heater_blinking"
 CONF_SENSOR_CHECK_SYSTEM_BLINKING = "check_system_blinking"
+CONF_SENSOR_POOL = "pool"
+CONF_SENSOR_SPA = "spa"
+CONF_SENSOR_SERVICE = "service"
+CONF_SENSOR_SPILLOVER = "spillover"
+CONF_SENSOR_SYSTEM_OFF = "system_off"
+CONF_SENSOR_SUPER_CHLORINATE = "super_chlorinate"
+CONF_SENSOR_IS_METRIC = "is_metric"
 
 
 CONFIG_SCHEMA = cv.Schema(
@@ -37,8 +44,22 @@ CONFIG_SCHEMA = cv.Schema(
         cv.Optional(CONF_SENSOR_FILTER_LOW_SPEED): binary_sensor.binary_sensor_schema(),
         cv.Optional(CONF_SENSOR_HEATER_BLINKING): binary_sensor.binary_sensor_schema(),
         cv.Optional(CONF_SENSOR_CHECK_SYSTEM_BLINKING): binary_sensor.binary_sensor_schema(),
+        cv.Optional(CONF_SENSOR_POOL): binary_sensor.binary_sensor_schema(),
+        cv.Optional(CONF_SENSOR_SPA): binary_sensor.binary_sensor_schema(),
+        cv.Optional(CONF_SENSOR_SERVICE): binary_sensor.binary_sensor_schema(),
+        cv.Optional(CONF_SENSOR_SPILLOVER): binary_sensor.binary_sensor_schema(),
+        cv.Optional(CONF_SENSOR_SYSTEM_OFF): binary_sensor.binary_sensor_schema(),
+        cv.Optional(CONF_SENSOR_SUPER_CHLORINATE): binary_sensor.binary_sensor_schema(),
+        cv.Optional(CONF_SENSOR_IS_METRIC): binary_sensor.binary_sensor_schema(),
     }
 )
+
+for i in range(1, 15):
+    CONFIG_SCHEMA = CONFIG_SCHEMA.extend(
+        {
+            cv.Optional(f"aux_{i}"): binary_sensor.binary_sensor_schema(),
+        }
+    )
 
 async def setup_sensor(config, key, setter):
     """setting up sensor"""
@@ -65,5 +86,18 @@ async def to_code(config):
     await setup_sensor(config, CONF_SENSOR_FILTER_LOW_SPEED, server.set_binary_filter_low_speed)
     await setup_sensor(config, CONF_SENSOR_HEATER_BLINKING, server.set_binary_heater_blinking)
     await setup_sensor(config, CONF_SENSOR_CHECK_SYSTEM_BLINKING, server.set_binary_check_system_blinking)
+    await setup_sensor(config, CONF_SENSOR_POOL, server.set_binary_pool)
+    await setup_sensor(config, CONF_SENSOR_SPA, server.set_binary_spa)
+    await setup_sensor(config, CONF_SENSOR_SERVICE, server.set_binary_service)
+    await setup_sensor(config, CONF_SENSOR_SPILLOVER, server.set_binary_spillover)
+    await setup_sensor(config, CONF_SENSOR_SYSTEM_OFF, server.set_binary_system_off)
+    await setup_sensor(config, CONF_SENSOR_SUPER_CHLORINATE, server.set_binary_super_chlorinate)
+    await setup_sensor(config, CONF_SENSOR_IS_METRIC, server.set_binary_is_metric)
+
+    for i in range(1, 15):
+        key = f"aux_{i}"
+        if key in config:
+            var = await binary_sensor.new_binary_sensor(config[key])
+            cg.add(server.set_binary_aux(i - 1, var))
 
 

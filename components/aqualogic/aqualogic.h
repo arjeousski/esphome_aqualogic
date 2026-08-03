@@ -94,6 +94,14 @@ namespace esphome
             void set_binary_filter_low_speed(BinarySensor *sensor) { this->binary_filter_low_speed_ = sensor; }
             void set_binary_heater_blinking(BinarySensor *sensor) { this->binary_heater_blinking_ = sensor; }
             void set_binary_check_system_blinking(BinarySensor *sensor) { this->binary_check_system_blinking_ = sensor; }
+            void set_binary_pool(BinarySensor *sensor) { this->binary_pool_ = sensor; }
+            void set_binary_spa(BinarySensor *sensor) { this->binary_spa_ = sensor; }
+            void set_binary_service(BinarySensor *sensor) { this->binary_service_ = sensor; }
+            void set_binary_spillover(BinarySensor *sensor) { this->binary_spillover_ = sensor; }
+            void set_binary_system_off(BinarySensor *sensor) { this->binary_system_off_ = sensor; }
+            void set_binary_super_chlorinate(BinarySensor *sensor) { this->binary_super_chlorinate_ = sensor; }
+            void set_binary_is_metric(BinarySensor *sensor) { this->binary_is_metric_ = sensor; }
+            void set_binary_aux(size_t index, BinarySensor *sensor) { this->binary_aux_[index] = sensor; }
             #endif
 
         protected:
@@ -128,6 +136,14 @@ namespace esphome
             BinarySensor *binary_filter_low_speed_{nullptr};
             BinarySensor *binary_heater_blinking_{nullptr};
             BinarySensor *binary_check_system_blinking_{nullptr};
+            BinarySensor *binary_pool_{nullptr};
+            BinarySensor *binary_spa_{nullptr};
+            BinarySensor *binary_service_{nullptr};
+            BinarySensor *binary_spillover_{nullptr};
+            BinarySensor *binary_system_off_{nullptr};
+            BinarySensor *binary_super_chlorinate_{nullptr};
+            BinarySensor *binary_is_metric_{nullptr};
+            BinarySensor *binary_aux_[14]{nullptr};
             #endif
             // Local variables
             AquaLogicProto *aqua_{nullptr};

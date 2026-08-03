@@ -14,6 +14,13 @@ const std::unordered_map<CONTROLLER_KEYS, CONTROLLER_FLAGS> AquaLogicComponent::
     {KEY_HEATER_1, HEATER_AUTO}
 };
 
+#ifdef USE_BINARY_SENSOR
+static const CONTROLLER_FLAGS AUX_FLAGS[14] = {
+    AUX_1, AUX_2, AUX_3, AUX_4, AUX_5, AUX_6, AUX_7,
+    AUX_8, AUX_9, AUX_10, AUX_11, AUX_12, AUX_13, AUX_14
+};
+#endif
+
 // Forward declarations
 void dataChanged(AquaLogicProto &obj);
 
@@ -271,6 +278,25 @@ void AquaLogicComponent::loop() {
                         this->binary_heater_blinking_->publish_state(aqua_->GetFlag(HEATER_BLINKING));
                     if (this->binary_check_system_blinking_)
                         this->binary_check_system_blinking_->publish_state(aqua_->GetFlag(CHECK_SYSTEM_BLINKING));
+                    if (this->binary_pool_)
+                        this->binary_pool_->publish_state(aqua_->GetFlag(POOL));
+                    if (this->binary_spa_)
+                        this->binary_spa_->publish_state(aqua_->GetFlag(SPA));
+                    if (this->binary_service_)
+                        this->binary_service_->publish_state(aqua_->GetFlag(SERVICE));
+                    if (this->binary_spillover_)
+                        this->binary_spillover_->publish_state(aqua_->GetFlag(SPILLOVER));
+                    if (this->binary_system_off_)
+                        this->binary_system_off_->publish_state(aqua_->GetFlag(SYSTEM_OFF));
+                    if (this->binary_super_chlorinate_)
+                        this->binary_super_chlorinate_->publish_state(aqua_->GetFlag(SUPER_CHLORINATE));
+                    if (this->binary_is_metric_)
+                        this->binary_is_metric_->publish_state(aqua_->GetFlag(IS_METRIC));
+                    for (size_t i = 0; i < 14; i++) {
+                        if (this->binary_aux_[i]) {
+                            this->binary_aux_[i]->publish_state(aqua_->GetFlag(AUX_FLAGS[i]));
+                        }
+                    }
                     #endif
                 }
 
