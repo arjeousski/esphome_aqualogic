@@ -72,6 +72,10 @@ external_components:
 
 Below is a typical configuration snippet for [poolcontroller.yaml](poolcontroller.yaml):
 
+> [!TIP]
+> **UART Optimization Settings (`rx_full_threshold` & `rx_timeout`)**:
+> On ESP32 controllers, configuring `rx_full_threshold: 8` and `rx_timeout: 1` under the `uart` component triggers hardware receive interrupts for incoming data immediately. This ensures the ESP32 processes keep-alive frames instantly, which is critical for sending key event commands back to the pool controller within the narrow response window.
+
 ```yaml
 # Configure the esp32 framework (supports both arduino and esp-idf)
 esp32:
@@ -91,11 +95,6 @@ uart:
 
 # Initialize AquaLogic base component
 aqualogic:
-
-> [!TIP]
-> **UART Optimization Settings (`rx_full_threshold` & `rx_timeout`)**:
-> On ESP32 controllers, configuring `rx_full_threshold: 8` and `rx_timeout: 1` under the `uart` component triggers hardware receive interrupts for incoming data immediately. This ensures the ESP32 processes keep-alive frames instantly, which is critical for sending key event commands back to the pool controller within the narrow response window.
-
 
 # Expose sensors
 sensor:
