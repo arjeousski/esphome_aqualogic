@@ -1,5 +1,4 @@
 #include "aqualogic.h"
-#include <ArduinoJson.h>
 
 namespace esphome {
 namespace aqualogic {
@@ -228,23 +227,6 @@ void AquaLogicComponent::loop() {
                     #endif
 
                     #ifdef USE_TEXT_SENSOR
-                    // Status Json
-                    /*if (this->text_status_) {
-                        DynamicJsonDocument status_doc(1024);
-
-                        struct packet_stats_t stats = this->aqua_->GetStats();
-
-                        status_doc["num_packets"] = stats.num_packets;
-                        status_doc["num_crc"] = stats.num_crc;
-                        status_doc["num_timeouts"] = stats.num_timeouts;
-                        status_doc["num_bytes_received"] = stats.num_bytes_received;
-                        status_doc["num_bytes_used"] = stats.num_bytes_used;
-                        status_doc["last_packet_received_ms"] = millis() - stats.last_packet_received_ms;
-
-                        String s;
-                        serializeJson(status_doc, s);
-                        ESP_LOGD(TAG, "Stats: %s",s.c_str());
-                    }*/
 
                     if (this->text_flagsstatus_) {
                         std::string value = "";

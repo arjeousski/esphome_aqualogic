@@ -4,7 +4,13 @@
   Created by Andrei Rjeousski
 */
 
+#ifdef USE_ARDUINO
 #include "Arduino.h"
+#else
+#include <string>
+#include <cstdint>
+#include "esphome/core/helpers.h"
+#endif
 #include "esphome/components/uart/uart.h"
 #include "esphome/core/component.h"
 
@@ -37,7 +43,7 @@ namespace esphome
     const uint16_t FRAME_TYPE_PUMP_SPEED_REQUEST = 0x0c01;
     const uint16_t FRAME_TYPE_PUMP_STATUS = 0x000c;
 
-    const byte FRAME_KEEP_ALIVE_FULL[4] = {0x01, 0x01, 0x00, 0x14};
+    const uint8_t FRAME_KEEP_ALIVE_FULL[4] = {0x01, 0x01, 0x00, 0x14};
 
     enum CONTROLLER_PCT_PARAM
     {
@@ -162,10 +168,10 @@ namespace esphome
 
     struct display_state_t
     {
-      String line1;
-      String line2;
-      String raw_line1;
-      String raw_line2;
+      std::string line1;
+      std::string line2;
+      std::string raw_line1;
+      std::string raw_line2;
 
       char line1_original[21] = {'\0'};
       char line2_original[21] = {'\0'};
@@ -216,8 +222,8 @@ namespace esphome
     public:
       AquaLogicProto();
 
-      size_t ReadFrame(esphome::uart::UARTDevice &port, byte buffer[], int maxLength, bool &complete);
-      data_changed_flags_t ProcessFrame(byte buffer[], size_t length);
+      size_t ReadFrame(esphome::uart::UARTDevice &port, uint8_t buffer[], int maxLength, bool &complete);
+      data_changed_flags_t ProcessFrame(uint8_t buffer[], size_t length);
 
       // Get States
       bool GetFlag(enum CONTROLLER_FLAGS flag);
@@ -259,10 +265,10 @@ namespace esphome
       unsigned long _last_keep_alive_time;
       bool _is_last_keep_alive;
 
-      byte _commandBuffer[64];
+      uint8_t _commandBuffer[64];
       size_t _commandSize = 0;
 
-      byte _frame[64];
+      uint8_t _frame[64];
       size_t _frameSize = 0;
       bool _frameJustAdded = false;
 
@@ -314,7 +320,7 @@ namespace esphome
       bool ProcessSaltLevel(const char *line);
       bool ProcessLeds(uint32_t states, uint32_t blink_states);
       bool SendFrame(esphome::uart::UARTDevice &port);      
-      String convertToHex(byte buffer[], size_t length);
+      std::string convertToHex(uint8_t buffer[], size_t length);
       void GenerateFrame();
     };
 

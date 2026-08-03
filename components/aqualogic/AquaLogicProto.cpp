@@ -6,11 +6,18 @@ namespace esphome
 
         static const char *TAG = "aqualogicproto";
 
+        static std::string trim(const std::string &str) {
+            size_t first = str.find_first_not_of(" \t\r\n");
+            if (first == std::string::npos) return "";
+            size_t last = str.find_last_not_of(" \t\r\n");
+            return str.substr(first, (last - first + 1));
+        }
+
         AquaLogicProto::AquaLogicProto()
         {
         }
 
-        size_t AquaLogicProto::ReadFrame(esphome::uart::UARTDevice &port, byte buffer[], int maxLength, bool &complete)
+        size_t AquaLogicProto::ReadFrame(esphome::uart::UARTDevice &port, uint8_t buffer[], int maxLength, bool &complete)
         {
 
             //ESP_LOGD(TAG, "ReadFrame: BytesReadSoFar=%d", _bytesRead);
@@ -38,7 +45,7 @@ namespace esphome
                     break;
                 }
 
-                byte ch = port.read();
+                uint8_t ch = port.read();
 
                 // ESP_LOGD(TAG,"%02x ", ch);
                 _stats.num_bytes_received++;
@@ -188,17 +195,17 @@ namespace esphome
             return true;
         }
 
-        String AquaLogicProto::convertToHex(byte buffer[], size_t length)
+        std::string AquaLogicProto::convertToHex(uint8_t buffer[], size_t length)
         {
             char strBuf[length * 3 + 1] = {'\0'};
             for (size_t i = 0; i < length; i++)
             {
                 sprintf(strBuf + strlen(strBuf), "%02x ", buffer[i]);
             }
-            return String(strBuf);
+            return std::string(strBuf);
         }
 
-        data_changed_flags_t AquaLogicProto::ProcessFrame(byte buffer[], size_t length)
+        data_changed_flags_t AquaLogicProto::ProcessFrame(uint8_t buffer[], size_t length)
         {
             uint16_t frameType = buffer[1] | buffer[0] << 8;
             bool dataChanged = false;
@@ -249,20 +256,20 @@ namespace esphome
                 }
 
                 // Copy raw strings
-                _display.raw_line1 = String(line1);
-                _display.raw_line2 = String(line2);
+                _display.raw_line1 = line1;
+                _display.raw_line2 = line2;
 
-                String x = String(line1);
-                x.trim();
-                if (!_display.line1.equals(x))
+                std::string x = line1;
+                x = trim(x);
+                if (_display.line1 != x)
                 {
                     displayChanged = true;
                     _display.line1 = x;
                 }
 
-                x = String(line2);
-                x.trim();
-                if (!_display.line2.equals(x))
+                x = line2;
+                x = trim(x);
+                if (_display.line2 != x)
                 {
                     displayChanged = true;
                     _display.line2 = x;
@@ -274,31 +281,31 @@ namespace esphome
                 }
 
                 // Air Temp
-                if (_display.line1.startsWith("Air Temp"))
+                if (_display.line1.rfind("Air Temp", 0) == 0)
                 {
                     dataChanged |= ProcessTemp(line1, _param_temp[AIR_TEMP]);
                 }
-                else if (_display.line1.startsWith("Pool Temp"))
+                else if (_display.line1.rfind("Pool Temp", 0) == 0)
                 {
                     dataChanged |= ProcessTemp(line1, _param_temp[POOL_TEMP]);
                 }
-                else if (_display.line1.startsWith("Spa Temp"))
+                else if (_display.line1.rfind("Spa Temp", 0) == 0)
                 {
                     dataChanged |= ProcessTemp(line1, _param_temp[SPA_TEMP]);
                 }
-                else if (_display.line1.equals("Pool Chlorinator"))
+                else if (_display.line1 == "Pool Chlorinator")
                 {
                     dataChanged |= ProcessChlorinator(line2, _param_pct[POOL_CHLORINATOR]);
                 }
-                else if (_display.line1.equals("Spa Chlorinator"))
+                else if (_display.line1 == "Spa Chlorinator")
                 {
                     dataChanged |= ProcessChlorinator(line2, _param_pct[SPA_CHLORINATOR]);
                 }
-                else if (_display.line1.equals("Salt Level"))
+                else if (_display.line1 == "Salt Level")
                 {
                     dataChanged |= ProcessSaltLevel(line2);
                 }
-                else if (_display.line1.equals("Gas Heater"))
+                else if (_display.line1 == "Gas Heater")
                 {
                     dataChanged |= ProcessGasHeater(line2);
                 }
@@ -493,14 +500,14 @@ namespace esphome
             // Gas Heater / Auto / Manual
             bool changed = false;
 
-            String val(line);
-            val.trim();
-            if (val.indexOf("Auto") >= 0 && !_flags[HEATER_AUTO])
+            std::string val(line);
+            val = trim(val);
+            if (val.find("Auto") != std::string::npos && !_flags[HEATER_AUTO])
             {
                 _flags[HEATER_AUTO] = true;
                 changed = true;
             }
-            else if (val.equals("Manual Off") && _flags[HEATER_AUTO])
+            else if (val == "Manual Off" && _flags[HEATER_AUTO])
             {
                 _flags[HEATER_AUTO] = false;
                 changed = true;
@@ -773,8 +780,8 @@ namespace esphome
             }
 
             // Stuff CRC (Big Endian)
-            byte crc_h = (byte)(crc >> 8);
-            byte crc_l = (byte)(crc & 0xFF);
+            uint8_t crc_h = (uint8_t)(crc >> 8);
+            uint8_t crc_l = (uint8_t)(crc & 0xFF);
 
             _frame[n++] = crc_h;
             if (crc_h == FRAME_DLE) _frame[n++] = 0x00;

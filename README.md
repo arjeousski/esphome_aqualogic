@@ -12,6 +12,7 @@ This custom ESPHome component interfaces with **Hayward/Goldline AquaLogic and P
 - **Text Sensors**: Mirror display line 1, display line 2, and active controller flags. Characters that are set to blink on the physical LCD display are automatically enclosed in square brackets (e.g. `[Check System]`) in the text sensors.
 - **Controls (Buttons)**: Emulate physical key presses for panel navigation (`Menu`, `Left`, `Right`, `Plus`, `Minus`) and toggle pool functions (`Filter`, `Lights`, `Heater (auto)`, `Waterfall`).
 - **Heater Scheduler**: Configurable allowed run-windows with automatic timezone synchronization.
+- **Dual-Framework Compatibility**: Fully compatible with both `arduino` and `esp-idf` compilation frameworks under ESPHome.
 
 ---
 
@@ -72,6 +73,12 @@ external_components:
 Below is a typical configuration snippet for [poolcontroller.yaml](poolcontroller.yaml):
 
 ```yaml
+# Configure the esp32 framework (supports both arduino and esp-idf)
+esp32:
+  board: nodemcu-32s
+  framework:
+    type: arduino  # Or switch to: esp-idf
+
 # Configure UART interface (AquaLogic runs at 19200 baud, 8N2)
 uart:
   tx_pin: 27
@@ -87,7 +94,7 @@ aqualogic:
 
 > [!TIP]
 > **UART Optimization Settings (`rx_full_threshold` & `rx_timeout`)**:
-> On ESP32 controllers, configuring `rx_full_threshold: 8` and `rx_timeout: 1` under the `uart` component triggers hardware receive interrupts for smaller chunks of incoming data immediately, rather than waiting for the default buffer fill. This ensures lowest latency for real-time LCD display replication.
+> On ESP32 controllers, configuring `rx_full_threshold: 8` and `rx_timeout: 1` under the `uart` component triggers hardware receive interrupts for incoming data immediately. This ensures the ESP32 processes keep-alive frames instantly, which is critical for sending key event commands back to the pool controller within the narrow response window.
 
 
 # Expose sensors
