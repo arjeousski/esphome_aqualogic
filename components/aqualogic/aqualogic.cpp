@@ -11,7 +11,21 @@ const std::unordered_map<CONTROLLER_KEYS, CONTROLLER_FLAGS> AquaLogicComponent::
     {KEY_LIGHTS, LIGHTS},
     {KEY_VALVE_3, VALVE_3},
     {KEY_VALVE_4, VALVE_4},
-    {KEY_HEATER_1, HEATER_AUTO}
+    {KEY_HEATER_1, HEATER_AUTO},
+    {KEY_AUX_1, AUX_1},
+    {KEY_AUX_2, AUX_2},
+    {KEY_AUX_3, AUX_3},
+    {KEY_AUX_4, AUX_4},
+    {KEY_AUX_5, AUX_5},
+    {KEY_AUX_6, AUX_6},
+    {KEY_AUX_7, AUX_7},
+    {KEY_AUX_8, AUX_8},
+    {KEY_AUX_9, AUX_9},
+    {KEY_AUX_10, AUX_10},
+    {KEY_AUX_11, AUX_11},
+    {KEY_AUX_12, AUX_12},
+    {KEY_AUX_13, AUX_13},
+    {KEY_AUX_14, AUX_14}
 };
 
 #ifdef USE_BINARY_SENSOR
@@ -54,13 +68,13 @@ static std::string format_display_line(const std::string &raw_line, const bool b
 }
 
 // New key retry functionality
-void AquaLogicComponent::send_key_with_retry(CONTROLLER_KEYS key) {
+void AquaLogicComponent::send_key_with_retry(CONTROLLER_KEYS key, uint16_t type) {
     // First check if this key is in our map
     auto it = key_to_flag_map_.find(key);
     if (it == key_to_flag_map_.end()) {
         ESP_LOGW(TAG, "Key %s not in key_to_flag_map_, not using retry logic", aqua_->GetKeyName(key));
         // Fall back to direct key send without retry
-        send_key(key);
+        send_key(key, type);
         return;
     }
 
@@ -75,6 +89,7 @@ void AquaLogicComponent::send_key_with_retry(CONTROLLER_KEYS key) {
             aqua_->GetKeyName(key), initial_flag_state_ ? "true" : "false");
 
     pending_key_ = key;
+    pending_key_type_ = type;
     waiting_for_confirmation_ = true;
     key_retry_count_ = 0;
     last_key_send_time_ = 0; // Force immediate send
@@ -148,7 +163,7 @@ void AquaLogicComponent::handle_key_retry_() {
         last_key_send_time_ = now;
 
         if (aqua_->CanSend()) {
-            aqua_->SendCommand(FRAME_TYPE_WIRELESS2_KEY_EVENT, pending_key_);
+            aqua_->SendCommand(pending_key_type_, pending_key_);
             key_retry_count_++;
         } else {
             ESP_LOGW(TAG, "Cannot retry key, buffer full");
@@ -159,21 +174,22 @@ void AquaLogicComponent::handle_key_retry_() {
 void AquaLogicComponent::clear_pending_key_() {
     waiting_for_confirmation_ = false;
     pending_key_ = KEY_NONE;
+    pending_key_type_ = FRAME_TYPE_WIRELESS2_KEY_EVENT;
     key_retry_count_ = 0;
     last_key_send_time_ = 0;
     initial_flag_state_ = false;
 }
 
-void AquaLogicComponent::send_key(CONTROLLER_KEYS key) {
+void AquaLogicComponent::send_key(CONTROLLER_KEYS key, uint16_t type) {
     if (waiting_for_confirmation_) {
         ESP_LOGW(TAG, "Cannot send key %s, already waiting for key %s confirmation", 
                 aqua_->GetKeyName(key), aqua_->GetKeyName(pending_key_));
         return;
     }
     
-    ESP_LOGD(TAG, "Sending Key=%u Name=%s", key, aqua_->GetKeyName(key));
+    ESP_LOGD(TAG, "Sending Key=%u Name=%s Type=%04x", key, aqua_->GetKeyName(key), type);
     if (aqua_->CanSend()) {
-        aqua_->SendCommand(FRAME_TYPE_WIRELESS2_KEY_EVENT, key);
+        aqua_->SendCommand(type, key);
     } else {
         ESP_LOGW(TAG, "Cannot send key, buffer full");
     }

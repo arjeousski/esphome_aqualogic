@@ -15,6 +15,13 @@ CODEOWNERS = ["@arjeousski"]
 DEPENDENCIES = ['uart']
 
 CONF_KEY = "key"
+CONF_TYPE = "type"
+FRAME_TYPES = {
+    "LOCAL_WIRED": 0x0002,
+    "REMOTE_WIRED": 0x0003,
+    "WIRELESS": 0x0083,
+    "WIRELESS2": 0x008c,
+}
 
 ns = cg.global_ns
 aqualogic_component_ns = cg.esphome_ns.namespace('aqualogic')
@@ -74,6 +81,9 @@ def to_code(config):
             cv.Required(CONF_KEY): cv.templatable(cv.enum(
                 AquaLogicKeys, upper=True
             )),
+            cv.Optional(CONF_TYPE, default="WIRELESS2"): cv.templatable(cv.enum(
+                FRAME_TYPES, upper=True
+            )),
         },
     ),
     synchronous=True,
@@ -81,8 +91,10 @@ def to_code(config):
 async def send_action_to_code(config, action_id, template_arg, args):
     paren = await cg.get_variable(config[CONF_ID])
     var = cg.new_Pvariable(action_id, template_arg, paren)
-    template_ = await cg.templatable(config[CONF_KEY], args, cg.uint32)
-    cg.add(var.set_key(template_))
+    template_key = await cg.templatable(config[CONF_KEY], args, cg.uint32)
+    cg.add(var.set_key(template_key))
+    template_type = await cg.templatable(config[CONF_TYPE], args, cg.uint16)
+    cg.add(var.set_type(template_type))
     return var
 
 
@@ -95,6 +107,9 @@ async def send_action_to_code(config, action_id, template_arg, args):
             cv.Required(CONF_KEY): cv.templatable(cv.enum(
                 AquaLogicKeys, upper=True
             )),
+            cv.Optional(CONF_TYPE, default="WIRELESS2"): cv.templatable(cv.enum(
+                FRAME_TYPES, upper=True
+            )),
         },
     ),
     synchronous=True,
@@ -102,6 +117,8 @@ async def send_action_to_code(config, action_id, template_arg, args):
 async def toggle_action_to_code(config, action_id, template_arg, args):
     paren = await cg.get_variable(config[CONF_ID])
     var = cg.new_Pvariable(action_id, template_arg, paren)
-    template_ = await cg.templatable(config[CONF_KEY], args, cg.uint32)
-    cg.add(var.set_key(template_))
+    template_key = await cg.templatable(config[CONF_KEY], args, cg.uint32)
+    cg.add(var.set_key(template_key))
+    template_type = await cg.templatable(config[CONF_TYPE], args, cg.uint16)
+    cg.add(var.set_type(template_type))
     return var

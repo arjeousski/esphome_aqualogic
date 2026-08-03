@@ -170,6 +170,7 @@ button:
     on_press:
       - aqualogic.toggle:
           key: LIGHTS
+          type: LOCAL_WIRED # Optional: LOCAL_WIRED, REMOTE_WIRED, WIRELESS, WIRELESS2 (default)
 
   - platform: template
     name: "Filter"
@@ -231,22 +232,22 @@ To configure key emulation and status monitoring, use the following tables as a 
 ### 1. Available Keys
 These keys can be passed as the `key` argument to either `aqualogic.send` or `aqualogic.toggle` actions:
 
-| Key String | Internal Constant | Supported Frame Type(s) | Description |
-| :--- | :--- | :--- | :--- |
-| `MENU` | `KEY_MENU` | Wired & Wireless | Menu button navigation |
-| `LEFT` | `KEY_LEFT` | Wired & Wireless | Left arrow navigation |
-| `RIGHT` | `KEY_RIGHT` | Wired & Wireless | Right arrow navigation |
-| `PLUS` | `KEY_PLUS` | Wired & Wireless | Plus (`+`) button navigation |
-| `MINUS` | `KEY_MINUS` | Wired & Wireless | Minus (`-`) button navigation |
-| `FILTER` | `KEY_FILTER` | Wired & Wireless | Filter pump button |
-| `LIGHTS` | `KEY_LIGHTS` | Wired & Wireless | Lights button |
-| `POOL_SPA` | `KEY_POOL_SPA` | Wired & Wireless | Pool / Spa mode button |
-| `VALVE_3` | `KEY_VALVE_3` | Wireless Only | Valve 3 (Waterfall) button |
-| `VALVE_4` | `KEY_VALVE_4` | Wireless Only | Valve 4 button |
-| `HEATER_1` | `KEY_HEATER_1` | Wireless Only | Heater auto button |
-| `SERVICE` | `KEY_SERVICE` | Wired & Wireless | Service button (on panel) |
-| `AUX_1` - `AUX_7` | `KEY_AUX_1` - `KEY_AUX_7` | Wired & Wireless | Aux 1 to Aux 7 buttons |
-| `AUX_8` - `AUX_14` | `KEY_AUX_8` - `KEY_AUX_14` | Wireless Only | Aux 8 to Aux 14 buttons |
+| Key String | Internal Constant | Supported Frame Type(s) | Action Support | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `MENU` | `KEY_MENU` | `LOCAL_WIRED`, `REMOTE_WIRED`, `WIRELESS`, `WIRELESS2` (Default) | Send Only | Menu button navigation |
+| `LEFT` | `KEY_LEFT` | `LOCAL_WIRED`, `REMOTE_WIRED`, `WIRELESS`, `WIRELESS2` (Default) | Send Only | Left arrow navigation |
+| `RIGHT` | `KEY_RIGHT` | `LOCAL_WIRED`, `REMOTE_WIRED`, `WIRELESS`, `WIRELESS2` (Default) | Send Only | Right arrow navigation |
+| `PLUS` | `KEY_PLUS` | `LOCAL_WIRED`, `REMOTE_WIRED`, `WIRELESS`, `WIRELESS2` (Default) | Send Only | Plus (`+`) button navigation |
+| `MINUS` | `KEY_MINUS` | `LOCAL_WIRED`, `REMOTE_WIRED`, `WIRELESS`, `WIRELESS2` (Default) | Send Only | Minus (`-`) button navigation |
+| `FILTER` | `KEY_FILTER` | `LOCAL_WIRED`, `REMOTE_WIRED`, `WIRELESS`, `WIRELESS2` (Default) | Send & Toggle | Filter pump button |
+| `LIGHTS` | `KEY_LIGHTS` | `LOCAL_WIRED`, `REMOTE_WIRED`, `WIRELESS`, `WIRELESS2` (Default) | Send & Toggle | Lights button |
+| `POOL_SPA` | `KEY_POOL_SPA` | `LOCAL_WIRED`, `REMOTE_WIRED`, `WIRELESS`, `WIRELESS2` (Default) | Send Only | Pool / Spa mode button |
+| `VALVE_3` | `KEY_VALVE_3` | `WIRELESS`, `WIRELESS2` (Default) | Send & Toggle | Valve 3 (Waterfall) button |
+| `VALVE_4` | `KEY_VALVE_4` | `WIRELESS`, `WIRELESS2` (Default) | Send & Toggle | Valve 4 button |
+| `HEATER_1` | `KEY_HEATER_1` | `WIRELESS`, `WIRELESS2` (Default) | Send & Toggle | Heater auto button |
+| `SERVICE` | `KEY_SERVICE` | `LOCAL_WIRED`, `REMOTE_WIRED`, `WIRELESS`, `WIRELESS2` (Default) | Send Only | Service button (on panel) |
+| `AUX_1` - `AUX_7` | `KEY_AUX_1` - `KEY_AUX_7` | `LOCAL_WIRED`, `REMOTE_WIRED`, `WIRELESS`, `WIRELESS2` (Default) | Send & Toggle | Aux 1 to Aux 7 buttons |
+| `AUX_8` - `AUX_14` | `KEY_AUX_8` - `KEY_AUX_14` | `WIRELESS`, `WIRELESS2` (Default) | Send & Toggle | Aux 8 to Aux 14 buttons |
 
 ### 2. Available States (Flags)
 These boolean flags are broadcasted by the controller. Any of these flags can be:
@@ -254,26 +255,26 @@ These boolean flags are broadcasted by the controller. Any of these flags can be
 - Inspected as part of the aggregated, comma-separated list in the `flags_status` text sensor (e.g. `POOL,FILTER,LIGHTS`).
 - Queried programmatically inside custom lambdas/scripts using the C++ helper: `GetFlag(FLAG_CONSTANT)`.
 
-| Flag Constant | Exposure Type | Description |
-| :--- | :--- | :--- |
-| `FILTER` | Binary Sensor | Filter pump status - High Speed (active/idle) |
-| `FILTER_LOW_SPEED` | Binary Sensor | Filter pump status - Low Speed (active/idle) |
-| `LIGHTS` | Binary Sensor | Lights status (on/off) |
-| `HEATER_AUTO` | Binary Sensor | Heater scheduler / auto mode (enabled/disabled) |
-| `HEATER_1` | Binary Sensor | Heater firing status (actively heating) |
-| `HEATER_BLINKING` | Binary Sensor | Heater waiting / idle status (active/idle) |
-| `VALVE_3` | Binary Sensor | Valve 3 / Waterfall status (open/closed) |
-| `VALVE_4` | Binary Sensor | Valve 4 status (open/closed) |
-| `CHECK_SYSTEM` | Binary Sensor | System check status warning LED (active/clear) |
-| `CHECK_SYSTEM_BLINKING` | Binary Sensor | System check flashing warning LED (active/clear) |
-| `POOL` | Binary Sensor | Pool mode state active |
-| `SPA` | Binary Sensor | Spa mode state active |
-| `SERVICE` | Binary Sensor | Service mode state active |
-| `SPILLOVER` | Binary Sensor | Spillover mode state active |
-| `SYSTEM_OFF` | Binary Sensor | System power off state |
-| `SUPER_CHLORINATE` | Binary Sensor | Super chlorination mode state |
-| `IS_METRIC` | Binary Sensor | Metric temperature unit state |
-| `AUX_1` - `AUX_14` | Binary Sensor | Aux channel 1 to 14 active flags |
+| Flag Constant | YAML Config Key | Exposure Type | Description |
+| :--- | :--- | :--- | :--- |
+| `FILTER` | `filter` | Binary Sensor | Filter pump status - High Speed (active/idle) |
+| `FILTER_LOW_SPEED` | `filter_low_speed` | Binary Sensor | Filter pump status - Low Speed (active/idle) |
+| `LIGHTS` | `lights` | Binary Sensor | Lights status (active/idle) |
+| `HEATER_AUTO` | `heater_auto` | Binary Sensor | Heater control auto mode state (active/idle) |
+| `HEATER_1` | `heater_1` | Binary Sensor | Heater status (active/idle) |
+| `HEATER_BLINKING` | `heater_blinking` | Binary Sensor | Heater waiting/idle blinking status |
+| `VALVE_3` | `valve_3` | Binary Sensor | Valve 3 status (open/closed) |
+| `VALVE_4` | `valve_4` | Binary Sensor | Valve 4 status (open/closed) |
+| `CHECK_SYSTEM` | `check_system` | Binary Sensor | System check status warning LED (active/clear) |
+| `CHECK_SYSTEM_BLINKING` | `check_system_blinking` | Binary Sensor | System check flashing warning LED (active/clear) |
+| `POOL` | `pool` | Binary Sensor | Pool mode state active |
+| `SPA` | `spa` | Binary Sensor | Spa mode state active |
+| `SERVICE` | `service` | Binary Sensor | Service mode state active |
+| `SPILLOVER` | `spillover` | Binary Sensor | Spillover mode state active |
+| `SYSTEM_OFF` | `system_off` | Binary Sensor | System power off state |
+| `SUPER_CHLORINATE` | `super_chlorinate` | Binary Sensor | Super chlorination mode state |
+| `IS_METRIC` | `is_metric` | Binary Sensor | Metric temperature unit state |
+| `AUX_1` - `AUX_14` | `aux_1` - `aux_14` | Binary Sensor | Aux channel 1 to 14 active flags |
 
 ### 3. Toggle Mappings for Confirmation (`aqualogic.toggle`)
 For keys that support state confirmation, the retry mechanism monitors the corresponding status flag. If a key is sent using `aqualogic.toggle` but is not in this table, it will fall back to a standard fire-and-forget command (equivalent to `aqualogic.send`).
@@ -285,6 +286,7 @@ For keys that support state confirmation, the retry mechanism monitors the corre
 | `VALVE_3` | `VALVE_3` | Verifies Valve 3 / Waterfall status changed |
 | `VALVE_4` | `VALVE_4` | Verifies Valve 4 status changed |
 | `HEATER_1` | `HEATER_AUTO` | Verifies Heater Auto state changed |
+| `AUX_1` - `AUX_14` | `AUX_1` - `AUX_14` | Verifies corresponding Aux status changed |
 
 ---
 
@@ -306,6 +308,28 @@ The component exposes two distinct actions for transmitting panel commands over 
   3. Listens to the incoming status broadcasts from the AquaLogic board.
   4. If the corresponding flag does not change state within **500ms**, it automatically re-sends the key frame, retrying up to a maximum of **3 times**.
   5. While waiting for a confirmation, it rejects new toggle requests to prevent queue collision and command flooding.
+
+### Action Parameters
+
+Both `aqualogic.send` and `aqualogic.toggle` accept the following parameters:
+
+* **`key`** (Required): The key string to send (see the [Available Keys](#1-available-keys) reference table).
+* **`type`** (Optional): The frame format used to transmit the key event. Supports the following options:
+  - `LOCAL_WIRED`: Local wired control panel frame type (`0x0002`)
+  - `REMOTE_WIRED`: Remote wired control panel frame type (`0x0003`)
+  - `WIRELESS`: Standard wireless remote frame type (`0x0083`)
+  - `WIRELESS2` (Default): Second/modern wireless remote frame type (`0x008c`)
+
+#### Custom Frame Type Example
+
+If you want to emulate a local physical wired panel rather than the default wireless remote:
+
+```yaml
+on_press:
+  - aqualogic.send:
+      key: MENU
+      type: LOCAL_WIRED
+```
 
 ### Display Parsing
 Some parameters (like temperatures, salt level, and chlorinator status) are updated by parsing the raw ASCII text broadcast to the character display LCD. The ESP32 parses these string patterns dynamically as the controller cycles through display screens.

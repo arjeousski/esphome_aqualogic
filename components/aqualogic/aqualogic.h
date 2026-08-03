@@ -59,8 +59,8 @@ namespace esphome
             void setup() override;
             void loop() override;
             void dump_config() override;
-            void send_key(CONTROLLER_KEYS key);
-            void send_key_with_retry(CONTROLLER_KEYS key);
+            void send_key(CONTROLLER_KEYS key, uint16_t type = FRAME_TYPE_WIRELESS2_KEY_EVENT);
+            void send_key_with_retry(CONTROLLER_KEYS key, uint16_t type = FRAME_TYPE_WIRELESS2_KEY_EVENT);
 
             #ifdef USE_SENSOR
             void set_temp_pool(Sensor *sensor) { this->temp_pool_ = sensor; }
@@ -154,6 +154,7 @@ namespace esphome
 
             // Key retry state
             CONTROLLER_KEYS pending_key_ = KEY_NONE;
+            uint16_t pending_key_type_ = FRAME_TYPE_WIRELESS2_KEY_EVENT;
             unsigned long last_key_send_time_ = 0;
             int key_retry_count_ = 0;
             bool waiting_for_confirmation_ = false;

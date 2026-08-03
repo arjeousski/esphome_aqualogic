@@ -17,11 +17,13 @@ namespace esphome
     public:
       explicit AquaLogicSendAction(AquaLogicComponent *aqualogic) : aqualogic_(aqualogic) {}
       TEMPLATABLE_VALUE(uint32_t, key)
+      TEMPLATABLE_VALUE(uint16_t, type)
 
       void play(Ts... x) override
       {
         auto val = static_cast<CONTROLLER_KEYS>(this->key_.value(x...));
-        this->aqualogic_->send_key(val);
+        auto type_val = this->type_.value(x...);
+        this->aqualogic_->send_key(val, type_val);
       }
 
     protected:
@@ -34,11 +36,13 @@ namespace esphome
      public:
       explicit AquaLogicToggleAction(AquaLogicComponent *aqualogic) : aqualogic_(aqualogic) {}
       TEMPLATABLE_VALUE(uint32_t, key)
+      TEMPLATABLE_VALUE(uint16_t, type)
 
       void play(Ts... x) override
       {
         auto val = static_cast<CONTROLLER_KEYS>(this->key_.value(x...));
-        this->aqualogic_->send_key_with_retry(val);
+        auto type_val = this->type_.value(x...);
+        this->aqualogic_->send_key_with_retry(val, type_val);
       }
 
     protected:
