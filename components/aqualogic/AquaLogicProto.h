@@ -140,6 +140,7 @@ namespace esphome
       KEY_RIGHT     = 0x0001,
       KEY_MENU      = 0x0002,
       KEY_LEFT      = 0x0004,
+      KEY_UNLOCK    = 0x0005,
       KEY_SERVICE   = 0x0008,
       KEY_MINUS     = 0x0010,
       KEY_PLUS      = 0x0020,
@@ -222,7 +223,7 @@ namespace esphome
     public:
       AquaLogicProto();
 
-      size_t ReadFrame(esphome::uart::UARTDevice &port, uint8_t buffer[], int maxLength, bool &complete);
+      size_t ReadFrame(esphome::uart::UARTDevice &port, uint8_t buffer[], size_t maxLength, bool &complete);
       data_changed_flags_t ProcessFrame(uint8_t buffer[], size_t length);
 
       // Get States
@@ -235,10 +236,10 @@ namespace esphome
 
       // Sending
       bool CanSend();
-      void SendCommand(const uint16_t type, const enum CONTROLLER_KEYS key);
+      void SendCommand(const uint16_t type, const enum CONTROLLER_KEYS key, const uint8_t action = 1, const uint8_t wired_key_bytes = 4);
 
       // Key Resolution
-      const enum CONTROLLER_KEYS GetKeyByName(const char *);
+      CONTROLLER_KEYS GetKeyByName(const char *);
       const char *GetKeyName(enum CONTROLLER_KEYS key);
 
       // Internal Stats

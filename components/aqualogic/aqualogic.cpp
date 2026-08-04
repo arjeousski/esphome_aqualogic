@@ -67,9 +67,9 @@ static std::string format_display_line(const std::string &raw_line, const bool b
     return trim(formatted);
 }
 
-// New key retry functionality
+// Send key with confirmation retry functionality
 void AquaLogicComponent::send_key_with_retry(CONTROLLER_KEYS key, uint16_t type) {
-    // First check if this key is in our map
+    // Check if key is in map
     auto it = key_to_flag_map_.find(key);
     if (it == key_to_flag_map_.end()) {
         ESP_LOGW(TAG, "Key %s not in key_to_flag_map_, not using retry logic", aqua_->GetKeyName(key));
@@ -83,7 +83,6 @@ void AquaLogicComponent::send_key_with_retry(CONTROLLER_KEYS key, uint16_t type)
         return;
     }
 
-    // If we get here, the key is in our map and we can use the retry logic
     initial_flag_state_ = aqua_->GetFlag(it->second);
     ESP_LOGD(TAG, "Initial flag state for %s: %s", 
             aqua_->GetKeyName(key), initial_flag_state_ ? "true" : "false");
@@ -114,10 +113,8 @@ bool AquaLogicComponent::is_key_confirmed_(CONTROLLER_KEYS key) const {
     auto it = key_to_flag_map_.find(key);
     if (it != key_to_flag_map_.end()) {
         bool flag_state = aqua_->GetFlag(it->second);
-        // For keys with flag mapping, check if the flag has toggled from initial state
         return flag_state != initial_flag_state_;
     }
-    // If key doesn't have a corresponding flag, consider it confirmed immediately
     return true;
 }
 
@@ -128,7 +125,6 @@ void AquaLogicComponent::handle_key_retry_() {
 
     unsigned long now = millis();
     
-    // Check if it's time to send/retry
     if (now - last_key_send_time_ >= KEY_RETRY_DELAY) {
         if (key_retry_count_ >= MAX_KEY_RETRIES) {
             ESP_LOGW(TAG, "Max retries (%d) reached for key %s", 
@@ -137,33 +133,29 @@ void AquaLogicComponent::handle_key_retry_() {
             return;
         }
 
-        // Check if the flag has toggled or if this is an unmapped key that was sent once
         if (is_flag_toggled_()) {
             ESP_LOGD(TAG, "Key %s confirmed after %d retries (flag toggled)", 
                     aqua_->GetKeyName(pending_key_), key_retry_count_);
             clear_pending_key_();
             return;
         } else if (key_retry_count_ > 0) {
-            // For keys without flag mapping, consider confirmed after first send
             auto it = key_to_flag_map_.find(pending_key_);
             if (it == key_to_flag_map_.end()) {
-                ESP_LOGD(TAG, "Key %s sent (no flag mapping)", 
-                        aqua_->GetKeyName(pending_key_));
+                ESP_LOGD(TAG, "Key %s sent (no flag mapping)", aqua_->GetKeyName(pending_key_));
                 clear_pending_key_();
                 return;
             }
         }
 
-        // Send the key again
         ESP_LOGD(TAG, "Retry %d/%d for key %s", 
-                key_retry_count_ + 1, MAX_KEY_RETRIES, 
-                aqua_->GetKeyName(pending_key_));
+                key_retry_count_ + 1, MAX_KEY_RETRIES, aqua_->GetKeyName(pending_key_));
         
-        // Even if we cannot send, increment the timer so that we don't send too often
         last_key_send_time_ = now;
 
         if (aqua_->CanSend()) {
-            aqua_->SendCommand(pending_key_type_, pending_key_);
+            // Action 3 = Click (Wired), Action 1 = Press (Wireless)
+            uint8_t action = (pending_key_type_ == 0x0002 || pending_key_type_ == 0x0003) ? 3 : 1;
+            aqua_->SendCommand(pending_key_type_, pending_key_, action, wired_key_bytes_);
             key_retry_count_++;
         } else {
             ESP_LOGW(TAG, "Cannot retry key, buffer full");
@@ -187,12 +179,29 @@ void AquaLogicComponent::send_key(CONTROLLER_KEYS key, uint16_t type) {
         return;
     }
     
-    ESP_LOGD(TAG, "Sending Key=%u Name=%s Type=%04x", key, aqua_->GetKeyName(key), type);
+    ESP_LOGD(TAG, "Sending Key=%u Name=%s Type=%04x", (unsigned long)key, aqua_->GetKeyName(key), type);
     if (aqua_->CanSend()) {
-        aqua_->SendCommand(type, key);
+        // Action 3 = Click for wired frames, Action 1 for wireless
+        uint8_t action = (type == 0x0002 || type == 0x0003) ? 3 : 1;
+        aqua_->SendCommand(type, key, action, wired_key_bytes_);
     } else {
         ESP_LOGW(TAG, "Cannot send key, buffer full");
     }
+}
+
+void AquaLogicComponent::press_key(CONTROLLER_KEYS key, uint16_t type) {
+    ESP_LOGD(TAG, "Holding Key=%u Name=%s Type=%04x", (unsigned long)key, aqua_->GetKeyName(key), type);
+    held_key_ = key;
+    held_key_type_ = type;
+}
+
+void AquaLogicComponent::release_key() {
+    if (held_key_ != KEY_NONE) {
+        ESP_LOGD(TAG, "Releasing Key=%u Name=%s", (unsigned long)held_key_, aqua_->GetKeyName(held_key_));
+        // Action 2 = End Hold / Release
+        aqua_->SendCommand(held_key_type_, held_key_, 2, wired_key_bytes_);
+    }
+    held_key_ = KEY_NONE;
 }
 
 void AquaLogicComponent::setup() {    
@@ -200,34 +209,40 @@ void AquaLogicComponent::setup() {
 }
 
 void AquaLogicComponent::loop() {
-    // Handle pending key retries
+    // 1. Handle state confirmation retries
     handle_key_retry_();
 
-    while(this->available()) {
+    // 2. Transmit Action 1 continuous press while holding
+    if (held_key_ != KEY_NONE) {
+        if (aqua_->CanSend()) {
+            aqua_->SendCommand(held_key_type_, held_key_, 1, wired_key_bytes_); // 1 = Press / Hold
+        }
+    }
+
+    // 3. Process incoming serial data
+    while (this->available()) {
         size_t bytesRead = aqua_->ReadFrame(*this, frameBuffer_, MAX_MESSAGE_SIZE, frameComplete_);
 
-        if (frameComplete_)
-        {
+        if (frameComplete_) {
             struct AQUA_Message newMessage;
             newMessage.length = bytesRead;
             memcpy(newMessage.data, frameBuffer_, bytesRead);
             data_changed_flags_t result = aqua_->ProcessFrame(newMessage.data, newMessage.length);
 
-            if (result && !(result & ERROR)) 
-            {
-                // If we're waiting for confirmation, check if the key was confirmed
+            if (result && !(result & ERROR)) {
                 if (waiting_for_confirmation_ && is_key_confirmed_(pending_key_)) {
                     ESP_LOGD(TAG, "Key %s confirmed after %d retries", 
                             aqua_->GetKeyName(pending_key_), key_retry_count_);
                     clear_pending_key_();
                 }
+
                 if (result & DATA_CHANGED) {
                     #ifdef USE_SENSOR
 
                     if (this->temp_air_)
                         this->temp_air_->publish_state(aqua_->GetTemp(AIR_TEMP));
                     
-                    if (this->temp_air_)
+                    if (this->temp_pool_)
                         this->temp_pool_->publish_state(aqua_->GetTemp(POOL_TEMP));                      
 
                     if (this->temp_spa_)
@@ -237,7 +252,7 @@ void AquaLogicComponent::loop() {
                         this->pump_speed_->publish_state(aqua_->GetPumpStatus().speed);                      
 
                     if (this->pump_power_)
-                        this->pump_power_->publish_state(aqua_->GetPumpStatus().power);                                              
+                        this->pump_power_->publish_state(aqua_->GetPumpStatus().power);                                                             
  
                     if (this->salt_level_)
                         this->salt_level_->publish_state(aqua_->GetSaltLevel());
@@ -253,8 +268,7 @@ void AquaLogicComponent::loop() {
 
                     if (this->text_flagsstatus_) {
                         std::string value = "";
-                        for (size_t i = 0; i < NUM_FLAGS; i++)
-                        {
+                        for (size_t i = 0; i < NUM_FLAGS; i++) {
                             if (aqua_->GetFlag(static_cast<CONTROLLER_FLAGS>(i))) {
                                 if (value.length() > 0) {
                                     value.append(",");
@@ -341,10 +355,9 @@ void AquaLogicComponent::dump_config(){
     #ifdef USE_SENSOR
         LOG_SENSOR("  ", "Temp Pool:", this->temp_pool_);
         LOG_SENSOR("  ", "Temp Air:", this->temp_air_);
-        LOG_SENSOR("  ", "Temp Air:", this->temp_spa_);
+        LOG_SENSOR("  ", "Temp Spa:", this->temp_spa_);
     #endif
 }
-
 
 }  // namespace aqualogic
 }  // namespace esphome

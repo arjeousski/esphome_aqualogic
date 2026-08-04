@@ -13,7 +13,8 @@ This custom ESPHome component interfaces with **Hayward/Goldline AquaLogic and P
 - **Controls (Buttons)**: Emulate physical key presses for panel navigation (`Menu`, `Left`, `Right`, `Plus`, `Minus`) and toggle pool functions (`Filter`, `Lights`, `Heater (auto)`, `Waterfall`).
 - **Heater Scheduler**: Configurable allowed run-windows with automatic timezone synchronization.
 - **Dual-Framework Compatibility**: Fully compatible with both `arduino` and `esp-idf` compilation frameworks under ESPHome.
-
+- **Flexible Command Types**: Supports local wired, remote wired, and wireless command frame types (`LOCAL_WIRED`, `REMOTE_WIRED`, `WIRELESS`, and `WIRELESS2`).
+- **Legacy Controller Compatibility**: Configurable 2-byte or 4-byte wired command frame payloads (`wired_key_bytes`) for seamless compatibility with both modern and older mainboard revisions.
 ---
 
 ## Hardware Requirements
@@ -93,8 +94,11 @@ uart:
   rx_full_threshold: 8
   rx_timeout: 1
 
-# Initialize AquaLogic base component
+# Initialize the AquaLogic component
 aqualogic:
+  # Optional: number of bytes per key value in wired packets (2 or 4, default: 4)
+  # Set to 2 if your wired controller/motherboard expects 6-byte frames instead of 10-byte frames.
+  wired_key_bytes: 4
 
 # Expose sensors
 sensor:
@@ -238,6 +242,7 @@ These keys can be passed as the `key` argument to either `aqualogic.send` or `aq
 | `RIGHT` | `KEY_RIGHT` | `LOCAL_WIRED`, `REMOTE_WIRED`, `WIRELESS`, `WIRELESS2` (Default) | Send Only | Right arrow navigation |
 | `PLUS` | `KEY_PLUS` | `LOCAL_WIRED`, `REMOTE_WIRED`, `WIRELESS`, `WIRELESS2` (Default) | Send Only | Plus (`+`) button navigation |
 | `MINUS` | `KEY_MINUS` | `LOCAL_WIRED`, `REMOTE_WIRED`, `WIRELESS`, `WIRELESS2` (Default) | Send Only | Minus (`-`) button navigation |
+| `UNLOCK` | `KEY_UNLOCK` | `LOCAL_WIRED`, `REMOTE_WIRED`, `WIRELESS`, `WIRELESS2` (Default) | Send Only | Emulates pressing both LEFT and RIGHT simultaneously (use press/release to hold) |
 | `FILTER` | `KEY_FILTER` | `LOCAL_WIRED`, `REMOTE_WIRED`, `WIRELESS`, `WIRELESS2` (Default) | Send & Toggle | Filter pump button |
 | `LIGHTS` | `KEY_LIGHTS` | `LOCAL_WIRED`, `REMOTE_WIRED`, `WIRELESS`, `WIRELESS2` (Default) | Send & Toggle | Lights button |
 | `POOL_SPA` | `KEY_POOL_SPA` | `LOCAL_WIRED`, `REMOTE_WIRED`, `WIRELESS`, `WIRELESS2` (Default) | Send Only | Pool / Spa mode button |
@@ -291,16 +296,16 @@ For keys that support state confirmation, the retry mechanism monitors the corre
 
 ## How It Works
 
-### Key Emulation: Send vs Toggle Actions
+### Key Emulation Actions
 
-The component exposes two distinct actions for transmitting panel commands over RS-485:
+The component exposes actions for transmitting panel commands over RS-485:
 
 #### 1. `aqualogic.send` (Fire-and-Forget)
 - **Use Case**: Navigation keys (`LEFT`, `RIGHT`, `PLUS`, `MINUS`, `MENU`).
-- **How it works**: Transmits the key event frame over the RS-485 line exactly once. Because navigation keys do not correspond to a single binary state flag on the panel (e.g., pressing `MENU` doesn't switch on a physical status LED), the component does not listen for confirmation or attempt auto-retries.
+- **How it works**: Transmits the key event frame over the RS-485 line exactly once. Because navigation keys do not correspond to a single binary state flag on the panel, the component does not listen for confirmation or attempt auto-retries.
 
 #### 2. `aqualogic.toggle` (Confirmed with Auto-Retries)
-- **Use Case**: Equipment toggles (`FILTER`, `LIGHTS`, `HEATER_1`, `VALVE_3`, `VALVE_4`).
+- **Use Case**: Equipment toggles (`FILTER`, `LIGHTS`, `HEATER_1`, `VALVE_3`, `VALVE_4`, `AUX_1` - `AUX_14`).
 - **How it works**:
   1. Records the **initial state** of the corresponding feature flag.
   2. Transmits the key event frame.
@@ -308,9 +313,16 @@ The component exposes two distinct actions for transmitting panel commands over 
   4. If the corresponding flag does not change state within **500ms**, it automatically re-sends the key frame, retrying up to a maximum of **3 times**.
   5. While waiting for a confirmation, it rejects new toggle requests to prevent queue collision and command flooding.
 
+#### 3. `aqualogic.press` & `aqualogic.release` (Button Hold Emulation)
+- **Use Case**: Holding down buttons (e.g. holding `UNLOCK` to bypass the configuration menu lock).
+- **How it works**:
+  - `aqualogic.press` starts continuously transmitting the key frame on every incoming Keep-Alive cycle (about every 100ms).
+  - `aqualogic.release` stops the hold transmission.
+  - Combine them with a standard ESPHome `delay` block to control the duration of the button hold.
+
 ### Action Parameters
 
-Both `aqualogic.send` and `aqualogic.toggle` accept the following parameters:
+`aqualogic.send`, `aqualogic.toggle`, and `aqualogic.press` accept the following parameters:
 
 * **`key`** (Required): The key string to send (see the [Available Keys](#1-available-keys) reference table).
 * **`type`** (Optional): The frame format used to transmit the key event. Supports the following options:
@@ -319,10 +331,11 @@ Both `aqualogic.send` and `aqualogic.toggle` accept the following parameters:
   - `WIRELESS`: Standard wireless remote frame type (`0x0083`)
   - `WIRELESS2` (Default): Second/modern wireless remote frame type (`0x008c`)
 
-#### Custom Frame Type Example
+`aqualogic.release` does not require any parameters.
 
-If you want to emulate a local physical wired panel rather than the default wireless remote:
+#### Custom Action Examples
 
+##### Emulating a Local Physical Wired Panel Menu Button Click:
 ```yaml
 on_press:
   - aqualogic.send:
@@ -330,8 +343,31 @@ on_press:
       type: LOCAL_WIRED
 ```
 
+##### Unlocking the Configuration Menu (5-Second Arrow Keys Hold):
+
+> [!IMPORTANT]
+> To unlock the Configuration Menu, you **must** specify `type: LOCAL_WIRED`. The pool controller's firmware ignores configuration menu unlock commands sent over wireless frame formats for security.
+
+```yaml
+on_press:
+  - aqualogic.press:
+      key: UNLOCK
+      type: LOCAL_WIRED
+  - delay: 5s
+  - aqualogic.release:
+```
+
 ### Display Parsing
 Some parameters (like temperatures, salt level, and chlorinator status) are updated by parsing the raw ASCII text broadcast to the character display LCD. The ESP32 parses these string patterns dynamically as the controller cycles through display screens.
+
+* **LCD Display Text**: Characters set to blink on the physical LCD screen are automatically enclosed in square brackets in the `display1` and `display2` text sensors (e.g., `[Check System]`).
+
+---
+
+## References
+
+* **Foundational Python Library**: [swilson/aqualogic](https://github.com/swilson/aqualogic) – Foundational library for reverse-engineering the Goldline/Hayward RS-485 protocol.
+* **Home Automation Serial Interface Manual**: [Hayward Owner's Manual (AQ-CO-SERIAL)](https://hayward.com/media/akeneo_connector/asset_files/0/9/092329C_RevB_6861.pdf) – Official documentation detailing serial keypad command structures and Configuration Menu unlocking sequences.
 
 ---
 

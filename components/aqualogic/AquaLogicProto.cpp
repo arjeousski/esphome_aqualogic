@@ -17,7 +17,7 @@ namespace esphome
         {
         }
 
-        size_t AquaLogicProto::ReadFrame(esphome::uart::UARTDevice &port, uint8_t buffer[], int maxLength, bool &complete)
+        size_t AquaLogicProto::ReadFrame(esphome::uart::UARTDevice &port, uint8_t buffer[], size_t maxLength, bool &complete)
         {
 
             //ESP_LOGD(TAG, "ReadFrame: BytesReadSoFar=%d", _bytesRead);
@@ -37,7 +37,7 @@ namespace esphome
                 if (_frame_start_time > 0 && (diff = millis() - _frame_start_time) > 500)
                 {
                     _stats.num_bytes_used -= _bytesRead;
-                    ESP_LOGW(TAG, "Timeout, too long from packet start: %d", diff);
+                    ESP_LOGW(TAG, "Timeout, too long from packet start: %lu", (unsigned long)diff);
                     _stats.num_timeouts++;
                     complete = false;
                     _bytesRead = _frame_start_time = 0;
@@ -323,7 +323,7 @@ namespace esphome
                 bool changed = ProcessLeds(states, blink_states);
                 if (changed)
                 {
-                    ESP_LOGD(TAG, "States: %x Blink: %x", states, blink_states);
+                    ESP_LOGD(TAG, "States: %lx Blink: %lx", (unsigned long)states, (unsigned long)blink_states);
                 }
 
                 dataChanged |= changed;
@@ -359,6 +359,52 @@ namespace esphome
             {
                 // Do nothing, this is combination of LED + Display
             }
+            else if (frameType == FRAME_TYPE_LOCAL_WIRED_KEY_EVENT || frameType == FRAME_TYPE_REMOTE_WIRED_KEY_EVENT)
+            {
+                uint32_t key1 = 0;
+                uint32_t key2 = 0;
+                bool has_copy = false;
+
+                if (length == 4)
+                {
+                    key1 = (uint32_t)buffer[2] | (uint32_t)buffer[3] << 8;
+                    has_copy = false;
+                }
+                else if (length == 10)
+                {
+                    key1 = (uint32_t)buffer[2] | (uint32_t)buffer[3] << 8 | (uint32_t)buffer[4] << 16 | (uint32_t)buffer[5] << 24;
+                    key2 = (uint32_t)buffer[6] | (uint32_t)buffer[7] << 8 | (uint32_t)buffer[8] << 16 | (uint32_t)buffer[9] << 24;
+                    has_copy = true;
+                }
+                else
+                {
+                    ESP_LOGW(TAG, "Wired Key Event Length Mismatch: Expected 4 or 10, Got=%d", length);
+                    return ERROR;
+                }
+
+                if (has_copy)
+                {
+                    ESP_LOGD(TAG, "Wired Key Event (10-byte): Key1=%lx Key2=%lx Packet: %s", (unsigned long)key1, (unsigned long)key2, convertToHex(buffer, length).c_str());
+                    if (key1 != key2)
+                    {
+                        ESP_LOGW(TAG, "Wired Key Event Mismatch: Key1=%lx Key2=%lx", (unsigned long)key1, (unsigned long)key2);
+                        return ERROR;
+                    }
+                }
+                else
+                {
+                    ESP_LOGD(TAG, "Wired Key Event (4-byte): Key=%lx Packet: %s", (unsigned long)key1, convertToHex(buffer, length).c_str());
+                }
+
+                if (key1 == 0)
+                {
+                    ESP_LOGD(TAG, "Wired Key Released: Key=%lx Packet: %s", (unsigned long)key1, convertToHex(buffer, length).c_str());
+                    return NOOP;
+                }
+
+                enum CONTROLLER_KEYS key = static_cast<enum CONTROLLER_KEYS>(key1);
+                ESP_LOGD(TAG, "Got Wired Key: KeyId=%lx Key=%s", (unsigned long)key, GetKeyName(key));
+            }
             else if (frameType == FRAME_TYPE_WIRELESS_KEY_EVENT || frameType == FRAME_TYPE_WIRELESS2_KEY_EVENT)
             {
                 // Wireless Key 2(frame type) + 01 + 4x2 (keys) + 00
@@ -372,23 +418,23 @@ namespace esphome
                 uint32_t key1 = (uint32_t)buffer[3] | (uint32_t)buffer[4] << 8 | (uint32_t)buffer[5] << 16 | (uint32_t)buffer[6] << 24;
                 uint32_t key2 = (uint32_t)buffer[7] | (uint32_t)buffer[8] << 8 | (uint32_t)buffer[9] << 16 | (uint32_t)buffer[10] << 24;
 
-                ESP_LOGD(TAG, "Key Event: Key1=%x Key2=%x Packet: %s", key1, key2, convertToHex(buffer, length).c_str());
+                ESP_LOGD(TAG, "Key Event: Key1=%lx Key2=%lx Packet: %s", (unsigned long)key1, (unsigned long)key2, convertToHex(buffer, length).c_str());
 
 
                 if (key1 != key2)
                 {
-                    ESP_LOGW(TAG, "Key event Missmatch: Key1=%x Key2=%x", key1, key2);
+                    ESP_LOGW(TAG, "Key event Missmatch: Key1=%lx Key2=%lx", (unsigned long)key1, (unsigned long)key2);
                     return ERROR;
                 }
 
                 if (key1 == 0)
                 {
-                    ESP_LOGD(TAG, "Key Released: Key=%x Packet: %s", key1, convertToHex(buffer, length).c_str());
+                    ESP_LOGD(TAG, "Key Released: Key=%lx Packet: %s", (unsigned long)key1, convertToHex(buffer, length).c_str());
                     return NOOP;
                 }
 
                 enum CONTROLLER_KEYS key = static_cast<enum CONTROLLER_KEYS>(key1);
-                ESP_LOGD(TAG, "Got Key: KeyId=%x Key=%s", key, GetKeyName(key));
+                ESP_LOGD(TAG, "Got Key: KeyId=%lx Key=%s", (unsigned long)key, GetKeyName(key));
             }
             else
             {
@@ -615,6 +661,8 @@ namespace esphome
                 return "MENU";
             case KEY_LEFT:
                 return "LEFT";
+            case KEY_UNLOCK:
+                return "UNLOCK";
             case KEY_SERVICE:
                 return "SERVICE";
             case KEY_MINUS:
@@ -679,7 +727,7 @@ namespace esphome
             return str;
         }
 
-        const enum CONTROLLER_KEYS AquaLogicProto::GetKeyByName(const char *value)
+        CONTROLLER_KEYS AquaLogicProto::GetKeyByName(const char *value)
         {
 
             // Covnert to upper case
@@ -712,38 +760,103 @@ namespace esphome
             return static_cast<enum CONTROLLER_KEYS>(0);
         }
 
-        void AquaLogicProto::SendCommand(const uint16_t type, const enum CONTROLLER_KEYS key)
+        void AquaLogicProto::SendCommand(const uint16_t type, const enum CONTROLLER_KEYS key, const uint8_t action, const uint8_t wired_key_bytes)
         {
-            if (key == KEY_NONE)
+            if (key == KEY_NONE && (type == FRAME_TYPE_WIRELESS_KEY_EVENT || type == FRAME_TYPE_WIRELESS2_KEY_EVENT))
             {
-                ESP_LOGD(TAG, "SendCommand: Skipping KEY_NONE");
+                ESP_LOGD(TAG, "SendCommand: Skipping KEY_NONE for wireless");
                 return;
             }
-
-            _commandSize = 12;
 
             // Command type
             _commandBuffer[0] = type >> 8;
             _commandBuffer[1] = type;
 
-            // Key Start
-            _commandBuffer[2] = 1;
+            if (type == FRAME_TYPE_LOCAL_WIRED_KEY_EVENT || type == FRAME_TYPE_REMOTE_WIRED_KEY_EVENT)
+            {
+                if (wired_key_bytes == 2)
+                {
+                    // Wired frame (2-byte keys): type (2) + press_keys (2) + release_keys (2) = 6 bytes total
+                    _commandSize = 6;
+                    if (action == 1) // Press
+                    {
+                        _commandBuffer[2] = key;
+                        _commandBuffer[3] = key >> 8;
+                        _commandBuffer[4] = 0;
+                        _commandBuffer[5] = 0;
+                    }
+                    else if (action == 2) // Release
+                    {
+                        _commandBuffer[2] = 0;
+                        _commandBuffer[3] = 0;
+                        _commandBuffer[4] = key;
+                        _commandBuffer[5] = key >> 8;
+                    }
+                    else // action == 3 (Click: Press + Release combined)
+                    {
+                        _commandBuffer[2] = key;
+                        _commandBuffer[3] = key >> 8;
+                        _commandBuffer[4] = key;
+                        _commandBuffer[5] = key >> 8;
+                    }
+                }
+                else
+                {
+                    // Wired frame (4-byte keys): type (2) + press_keys (4) + release_keys (4) = 10 bytes total
+                    _commandSize = 10;
+                    if (action == 1) // Press
+                    {
+                        _commandBuffer[2] = key;
+                        _commandBuffer[3] = key >> 8;
+                        _commandBuffer[4] = key >> 16;
+                        _commandBuffer[5] = key >> 24;
+                        _commandBuffer[6] = 0;
+                        _commandBuffer[7] = 0;
+                        _commandBuffer[8] = 0;
+                        _commandBuffer[9] = 0;
+                    }
+                    else if (action == 2) // Release
+                    {
+                        _commandBuffer[2] = 0;
+                        _commandBuffer[3] = 0;
+                        _commandBuffer[4] = 0;
+                        _commandBuffer[5] = 0;
+                        _commandBuffer[6] = key;
+                        _commandBuffer[7] = key >> 8;
+                        _commandBuffer[8] = key >> 16;
+                        _commandBuffer[9] = key >> 24;
+                    }
+                    else // action == 3 (Click: Press + Release combined)
+                    {
+                        _commandBuffer[2] = key;
+                        _commandBuffer[3] = key >> 8;
+                        _commandBuffer[4] = key >> 16;
+                        _commandBuffer[5] = key >> 24;
+                        _commandBuffer[6] = key;
+                        _commandBuffer[7] = key >> 8;
+                        _commandBuffer[8] = key >> 16;
+                        _commandBuffer[9] = key >> 24;
+                    }
+                }
+            }
+            else
+            {
+                // Wireless frame: type (2) + action (1) + key (4) + key copy (4) + end (1) = 12 bytes total
+                _commandSize = 12;
+                _commandBuffer[2] = action; // 1 = Press, 2 = Release
+                _commandBuffer[3] = key;
+                _commandBuffer[4] = key >> 8;
+                _commandBuffer[5] = key >> 16;
+                _commandBuffer[6] = key >> 24;
+                _commandBuffer[7] = key;
+                _commandBuffer[8] = key >> 8;
+                _commandBuffer[9] = key >> 16;
+                _commandBuffer[10] = key >> 24;
+                _commandBuffer[11] = 0;
+            }
 
-            // 4 byte key
-            _commandBuffer[3] = key;
-            _commandBuffer[4] = key >> 8;
-            _commandBuffer[5] = key >> 16;
-            _commandBuffer[6] = key >> 24;
-
-            _commandBuffer[7] = key;
-            _commandBuffer[8] = key >> 8;
-            _commandBuffer[9] = key >> 16;
-            _commandBuffer[10] = key >> 24;
-
-            // Key End
-            _commandBuffer[11] = 0;
-
-            ESP_LOGD(TAG, "SendCommand: Type=%x Key=%x Payload=%s", type, key, convertToHex(_commandBuffer, _commandSize).c_str());
+            ESP_LOGD(TAG, "SendCommand: Type=%04x Key=%lx Action=%d Size=%d Payload=%s", 
+                    type, (unsigned long)key, action, _commandSize, convertToHex(_commandBuffer, _commandSize).c_str());
 
             GenerateFrame();
         }

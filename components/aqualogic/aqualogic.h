@@ -61,6 +61,9 @@ namespace esphome
             void dump_config() override;
             void send_key(CONTROLLER_KEYS key, uint16_t type = FRAME_TYPE_WIRELESS2_KEY_EVENT);
             void send_key_with_retry(CONTROLLER_KEYS key, uint16_t type = FRAME_TYPE_WIRELESS2_KEY_EVENT);
+            void press_key(CONTROLLER_KEYS key, uint16_t type = FRAME_TYPE_WIRELESS2_KEY_EVENT);
+            void release_key();
+            void set_wired_key_bytes(uint8_t bytes) { this->wired_key_bytes_ = bytes; }
 
             #ifdef USE_SENSOR
             void set_temp_pool(Sensor *sensor) { this->temp_pool_ = sensor; }
@@ -160,7 +163,11 @@ namespace esphome
             bool waiting_for_confirmation_ = false;
             bool initial_flag_state_ = false;
 
-            // Key to flag mapping for confirmation
+            // Key hold state
+            CONTROLLER_KEYS held_key_ = KEY_NONE;
+            uint16_t held_key_type_ = FRAME_TYPE_WIRELESS2_KEY_EVENT;
+
+              // Key to flag mapping for confirmation
             static const std::unordered_map<CONTROLLER_KEYS, CONTROLLER_FLAGS> key_to_flag_map_;
 
             // Key retry methods
@@ -168,6 +175,8 @@ namespace esphome
             bool is_flag_toggled_() const;
             void handle_key_retry_();
             void clear_pending_key_();
+
+            uint8_t wired_key_bytes_ = 4;
         };
 
         // Key to flag mapping definition moved to implementation file
