@@ -282,10 +282,10 @@ namespace esphome
       DataChangeCallback _dataChangeCallback = nullptr;
       DisplayChangeCallback _displayChangeCallBack = nullptr;
 
-      float _param_temp[NUM_TEMP_PARAM];
-      float _param_pct[NUM_PCT_PARAM];
+      float _param_temp[NUM_TEMP_PARAM] = {0.0f};
+      float _param_pct[NUM_PCT_PARAM] = {0.0f};
       bool _flags[CONTROLLER_FLAGS::NUM_FLAGS] = {false};
-      int _param_salt_level;
+      int _param_salt_level = 0;
 
       const unsigned long _leds[26] = {
           1UL << 0,  // HEATER_1
