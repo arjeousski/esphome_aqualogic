@@ -248,6 +248,7 @@ namespace esphome
       // Callbacks
       void OnDataChangeCallback(DataChangeCallback cb);
       void OnDisplayChangeCallback(DisplayChangeCallback cb);
+      std::string FormatDisplayLine(const std::string &raw_line, const bool blink_states[20]);
 
     private:
       enum state

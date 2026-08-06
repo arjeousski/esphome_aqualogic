@@ -260,6 +260,11 @@ namespace esphome
                 _display.raw_line2 = line2;
 
                 std::string x = line1;
+                size_t pos;
+                while ((pos = x.find('_')) != std::string::npos)
+                {
+                    x.replace(pos, 1, "\xC2\xB0");
+                }
                 x = trim(x);
                 if (_display.line1 != x)
                 {
@@ -268,6 +273,10 @@ namespace esphome
                 }
 
                 x = line2;
+                while ((pos = x.find('_')) != std::string::npos)
+                {
+                    x.replace(pos, 1, "\xC2\xB0");
+                }
                 x = trim(x);
                 if (_display.line2 != x)
                 {
@@ -277,7 +286,9 @@ namespace esphome
 
                 if (displayChanged)
                 {
-                    ESP_LOGD(TAG, "Display Update Line1(%s) Line2(%s)", _display.line1.c_str(), _display.line2.c_str());
+                    ESP_LOGD(TAG, "Display Update Line1(%s) Line2(%s)", 
+                             FormatDisplayLine(_display.raw_line1, _display.line1_blink_state).c_str(), 
+                             FormatDisplayLine(_display.raw_line2, _display.line2_blink_state).c_str());
                 }
 
                 // Air Temp
@@ -910,6 +921,39 @@ namespace esphome
 
             // It is possible that we are generating frame while data is waiting on UART, so we are going to skip one KeepAlive
             _frameJustAdded = true;
+        }
+
+        std::string AquaLogicProto::FormatDisplayLine(const std::string &raw_line, const bool blink_states[20])
+        {
+            std::string formatted = "";
+            bool in_blink = false;
+            for (size_t i = 0; i < raw_line.length() && i < 20; i++)
+            {
+                bool char_blinks = blink_states[i];
+                if (char_blinks && !in_blink)
+                {
+                    formatted += '[';
+                    in_blink = true;
+                }
+                else if (!char_blinks && in_blink)
+                {
+                    formatted += ']';
+                    in_blink = false;
+                }
+                if (raw_line[i] == '_')
+                {
+                    formatted += "\xC2\xB0";
+                }
+                else
+                {
+                    formatted += raw_line[i];
+                }
+            }
+            if (in_blink)
+            {
+                formatted += ']';
+            }
+            return trim(formatted);
         }
 
     }

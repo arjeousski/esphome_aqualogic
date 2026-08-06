@@ -38,35 +38,6 @@ static const CONTROLLER_FLAGS AUX_FLAGS[14] = {
 // Forward declarations
 void dataChanged(AquaLogicProto &obj);
 
-static std::string trim(const std::string &str) {
-    size_t first = str.find_first_not_of(" \t\r\n");
-    if (first == std::string::npos) {
-        return "";
-    }
-    size_t last = str.find_last_not_of(" \t\r\n");
-    return str.substr(first, (last - first + 1));
-}
-
-static std::string format_display_line(const std::string &raw_line, const bool blink_states[20]) {
-    std::string formatted = "";
-    bool in_blink = false;
-    for (size_t i = 0; i < raw_line.length() && i < 20; i++) {
-        bool char_blinks = blink_states[i];
-        if (char_blinks && !in_blink) {
-            formatted += '[';
-            in_blink = true;
-        } else if (!char_blinks && in_blink) {
-            formatted += ']';
-            in_blink = false;
-        }
-        formatted += raw_line[i];
-    }
-    if (in_blink) {
-        formatted += ']';
-    }
-    return trim(formatted);
-}
-
 // Send key with confirmation retry functionality
 void AquaLogicComponent::send_key_with_retry(CONTROLLER_KEYS key, uint16_t type) {
     // Check if key is in map
@@ -179,7 +150,7 @@ void AquaLogicComponent::send_key(CONTROLLER_KEYS key, uint16_t type) {
         return;
     }
     
-    ESP_LOGD(TAG, "Sending Key=%u Name=%s Type=%04x", (unsigned long)key, aqua_->GetKeyName(key), type);
+    ESP_LOGD(TAG, "Sending Key=%lu Name=%s Type=%04x", (unsigned long)key, aqua_->GetKeyName(key), type);
     if (aqua_->CanSend()) {
         // Action 3 = Click for wired frames, Action 1 for wireless
         uint8_t action = (type == 0x0002 || type == 0x0003) ? 3 : 1;
@@ -190,14 +161,14 @@ void AquaLogicComponent::send_key(CONTROLLER_KEYS key, uint16_t type) {
 }
 
 void AquaLogicComponent::press_key(CONTROLLER_KEYS key, uint16_t type) {
-    ESP_LOGD(TAG, "Holding Key=%u Name=%s Type=%04x", (unsigned long)key, aqua_->GetKeyName(key), type);
+    ESP_LOGD(TAG, "Holding Key=%lu Name=%s Type=%04x", (unsigned long)key, aqua_->GetKeyName(key), type);
     held_key_ = key;
     held_key_type_ = type;
 }
 
 void AquaLogicComponent::release_key() {
     if (held_key_ != KEY_NONE) {
-        ESP_LOGD(TAG, "Releasing Key=%u Name=%s", (unsigned long)held_key_, aqua_->GetKeyName(held_key_));
+        ESP_LOGD(TAG, "Releasing Key=%lu Name=%s", (unsigned long)held_key_, aqua_->GetKeyName(held_key_));
         // Action 2 = End Hold / Release
         aqua_->SendCommand(held_key_type_, held_key_, 2, wired_key_bytes_);
     }
@@ -335,12 +306,12 @@ void AquaLogicComponent::loop() {
                     struct display_state_t display = aqua_->GetDisplay();
 
                     if (this->text_display1_) {
-                        std::string formatted = format_display_line(display.raw_line1.c_str(), display.line1_blink_state);
+                        std::string formatted = aqua_->FormatDisplayLine(display.raw_line1, display.line1_blink_state);
                         this->text_display1_->publish_state(formatted);   
                     }                        
 
                     if (this->text_display2_) {
-                        std::string formatted = format_display_line(display.raw_line2.c_str(), display.line2_blink_state);
+                        std::string formatted = aqua_->FormatDisplayLine(display.raw_line2, display.line2_blink_state);
                         this->text_display2_->publish_state(formatted);   
                     }
                     #endif
