@@ -77,6 +77,14 @@ namespace esphome
                     }
                     else
                     {
+                        if (_bytesRead >= maxLength)
+                        {
+                            ESP_LOGW(TAG, "Frame exceeded maxLength (%zu), dropping", maxLength);
+                            _currentState = WAIT_FOR_START;
+                            _stats.num_bytes_used -= _bytesRead;
+                            _bytesRead = 0;
+                            break;
+                        }
                         _stats.num_bytes_used++;
                         buffer[_bytesRead++] = ch;
                     }
@@ -93,6 +101,14 @@ namespace esphome
                         // if ch == 0, we add FRAME_DLE character back to stream
                         if (!ch)
                         {
+                            if (_bytesRead >= maxLength)
+                            {
+                                ESP_LOGW(TAG, "Frame exceeded maxLength (%zu), dropping", maxLength);
+                                _currentState = WAIT_FOR_START;
+                                _stats.num_bytes_used -= _bytesRead;
+                                _bytesRead = 0;
+                                break;
+                            }
                             _stats.num_bytes_used++;
                             buffer[_bytesRead++] = FRAME_DLE;
                             _currentState = WAIT_FOR_END;
@@ -226,8 +242,12 @@ namespace esphome
             }
             else if (frameType == FRAME_TYPE_DISPLAY_UPDATE)
             {
+                if (length < 3)
+                    return ERROR;
+
                 size_t displayWidth = (length - 3) / 2; // crc + display byte
-                                                        //        frame_display_update_t *frame = (frame_display_update_t *)(&buffer[0]);
+                if (displayWidth == 0 || displayWidth > 20)
+                    return ERROR;
 
                 // break up strings into own variables
                 char line1[displayWidth + 1];
@@ -245,6 +265,9 @@ namespace esphome
 
                 strcpy(_display.line1_original, line1);
                 strcpy(_display.line2_original, line2);
+
+                memset(_display.line1_blink_state, 0, sizeof(_display.line1_blink_state));
+                memset(_display.line2_blink_state, 0, sizeof(_display.line2_blink_state));
 
                 // Assign blink flags, strip blinks from characters
                 for (size_t i = 0; i < displayWidth; i++)
@@ -294,15 +317,21 @@ namespace esphome
                 // Air Temp
                 if (_display.line1.rfind("Air Temp", 0) == 0)
                 {
-                    dataChanged |= ProcessTemp(line1, _param_temp[AIR_TEMP]);
+                    bool ok = ProcessTemp(line1, _param_temp[AIR_TEMP]);
+                    if (!ok) ok = ProcessTemp(line2, _param_temp[AIR_TEMP]);
+                    dataChanged |= ok;
                 }
                 else if (_display.line1.rfind("Pool Temp", 0) == 0)
                 {
-                    dataChanged |= ProcessTemp(line1, _param_temp[POOL_TEMP]);
+                    bool ok = ProcessTemp(line1, _param_temp[POOL_TEMP]);
+                    if (!ok) ok = ProcessTemp(line2, _param_temp[POOL_TEMP]);
+                    dataChanged |= ok;
                 }
                 else if (_display.line1.rfind("Spa Temp", 0) == 0)
                 {
-                    dataChanged |= ProcessTemp(line1, _param_temp[SPA_TEMP]);
+                    bool ok = ProcessTemp(line1, _param_temp[SPA_TEMP]);
+                    if (!ok) ok = ProcessTemp(line2, _param_temp[SPA_TEMP]);
+                    dataChanged |= ok;
                 }
                 else if (_display.line1 == "Pool Chlorinator")
                 {
@@ -312,9 +341,11 @@ namespace esphome
                 {
                     dataChanged |= ProcessChlorinator(line2, _param_pct[SPA_CHLORINATOR]);
                 }
-                else if (_display.line1 == "Salt Level")
+                else if (_display.line1 == "Salt Level" || _display.line1.rfind("Salt Level", 0) == 0)
                 {
-                    dataChanged |= ProcessSaltLevel(line2);
+                    bool ok = ProcessSaltLevel(line2);
+                    if (!ok) ok = ProcessSaltLevel(line1);
+                    dataChanged |= ok;
                 }
                 else if (_display.line1 == "Gas Heater")
                 {
@@ -341,7 +372,9 @@ namespace esphome
             }
             else if (frameType == FRAME_TYPE_PUMP_SPEED_REQUEST)
             {
-                // Expected message to be 2 bytes
+                if (length < 4)
+                    return ERROR;
+
                 int pumpSpeed = (uint16_t)buffer[2] << 8 | (uint16_t)buffer[3];
                 if (pumpSpeed != _pump.speed)
                 {
@@ -351,7 +384,9 @@ namespace esphome
             }
             else if (frameType == FRAME_TYPE_PUMP_STATUS)
             {
-                // Expected message to be 7 bytes
+                if (length < 7)
+                    return ERROR;
+
                 int pumpSpeed = (int)buffer[3] << 8 | (int)buffer[4];
                 int power = ((((buffer[5] & 0xf0) >> 4) * 1000) +
                              (((buffer[5] & 0x0f)) * 100) +
@@ -476,29 +511,50 @@ namespace esphome
 
         bool AquaLogicProto::ProcessTemp(const char *line, float &variable)
         {
-            bool changed = false;
-            char tmp[strlen(line) + 1];
-            strcpy(tmp, line);
-            // Digits are 3rd token
-            char *token = strtok(tmp, " ");
-            token = strtok(NULL, " ");
-            token = strtok(NULL, " ");
+            if (line == nullptr)
+                return false;
 
-            if (token[strlen(token) - 1] == 'F' && _flags[IS_METRIC])
+            std::string s(line);
+            s = trim(s);
+            if (s.empty())
+                return false;
+
+            bool changed = false;
+
+            // Check metric flag from trailing unit character
+            char last_char = s.back();
+            if (last_char == 'F' && _flags[IS_METRIC])
             {
                 _flags[IS_METRIC] = false;
                 changed = true;
             }
-            else if (token[strlen(token) - 1] == 'C' && !_flags[IS_METRIC])
+            else if (last_char == 'C' && !_flags[IS_METRIC])
             {
                 _flags[IS_METRIC] = true;
                 changed = true;
             }
 
-            // Get rid of degree
-            token[strlen(token) - 2] = 0;
+            // Find last token (where temperature digits reside, e.g. "82_F" or "82°F")
+            char tmp[s.length() + 1];
+            strcpy(tmp, s.c_str());
+            char *token = strtok(tmp, " ");
+            char *last_token = nullptr;
+            while (token != nullptr)
+            {
+                last_token = token;
+                token = strtok(nullptr, " ");
+            }
 
-            float newValue = atof(token);
+            if (last_token == nullptr)
+                return changed;
+
+            char *endptr = nullptr;
+            float newValue = strtof(last_token, &endptr);
+            if (endptr == last_token)
+            {
+                // No numeric value found (e.g. sensor error or empty token)
+                return changed;
+            }
 
             if (newValue != variable)
             {
@@ -511,45 +567,70 @@ namespace esphome
 
         bool AquaLogicProto::ProcessChlorinator(const char *line, float &variable)
         {
-            // X Chlorinator <value>%
-            bool changed = false;
-            char tmp[strlen(line) + 1];
-            strcpy(tmp, line);
-            char *token = strtok(tmp, " ");
+            if (line == nullptr)
+                return false;
 
-            // Get rid of %
-            token[strlen(token) - 1] = 0;
+            std::string s(line);
+            s = trim(s);
+            if (s.empty())
+                return false;
 
-            float newValue = atof(token);
+            if (s == "Off" || s == "OFF")
+            {
+                if (variable != 0.0f)
+                {
+                    variable = 0.0f;
+                    return true;
+                }
+                return false;
+            }
+
+            // Find start of numbers (skip spaces, brackets, etc.)
+            size_t start = s.find_first_of("0123456789+-");
+            if (start == std::string::npos)
+                return false;
+
+            char *endptr = nullptr;
+            float newValue = strtof(s.c_str() + start, &endptr);
+            if (endptr == s.c_str() + start)
+                return false;
 
             if (newValue != variable)
             {
                 variable = newValue;
-                changed = true;
+                return true;
             }
 
-            return changed;
+            return false;
         }
 
         bool AquaLogicProto::ProcessSaltLevel(const char *line)
         {
-            // Salt Level <value> [g/L|PPM|
+            // Salt Level <value> [g/L|PPM]
+            if (line == nullptr)
+                return false;
 
-            bool changed = false;
-            char tmp[strlen(line) + 1];
-            strcpy(tmp, line);
-            char *token = strtok(tmp, " ");
+            std::string s(line);
+            s = trim(s);
+            if (s.empty())
+                return false;
 
-            // Get rid of %
-            int newValue = atoi(token);
+            size_t start = s.find_first_of("0123456789");
+            if (start == std::string::npos)
+                return false;
+
+            char *endptr = nullptr;
+            int newValue = (int)strtol(s.c_str() + start, &endptr, 10);
+            if (endptr == s.c_str() + start)
+                return false;
 
             if (newValue != _param_salt_level)
             {
                 _param_salt_level = newValue;
-                changed = true;
+                return true;
             }
 
-            return changed;
+            return false;
         }
 
         bool AquaLogicProto::ProcessGasHeater(const char *line)
@@ -740,6 +821,8 @@ namespace esphome
 
         CONTROLLER_KEYS AquaLogicProto::GetKeyByName(const char *value)
         {
+            if (value == nullptr)
+                return KEY_NONE;
 
             // Covnert to upper case
             char copy[strlen(value) + 1];
@@ -761,14 +844,22 @@ namespace esphome
                 }
             }
             */
-            for (size_t i = 0; i < NUM_FLAGS; i++)
+            static const CONTROLLER_KEYS ALL_KEYS[] = {
+                KEY_RIGHT, KEY_MENU, KEY_LEFT, KEY_UNLOCK, KEY_SERVICE,
+                KEY_MINUS, KEY_PLUS, KEY_POOL_SPA, KEY_FILTER, KEY_LIGHTS,
+                KEY_AUX_1, KEY_AUX_2, KEY_AUX_3, KEY_AUX_4, KEY_AUX_5,
+                KEY_AUX_6, KEY_AUX_7, KEY_VALVE_3, KEY_VALVE_4, KEY_HEATER_1,
+                KEY_AUX_8, KEY_AUX_9, KEY_AUX_10, KEY_AUX_11, KEY_AUX_12,
+                KEY_AUX_13, KEY_AUX_14
+            };
+
+            for (CONTROLLER_KEYS key : ALL_KEYS)
             {
-                enum CONTROLLER_KEYS key = static_cast<enum CONTROLLER_KEYS>(i);
                 if (strcmp(GetKeyName(key), upper) == 0)
                     return key;
             }
 
-            return static_cast<enum CONTROLLER_KEYS>(0);
+            return KEY_NONE;
         }
 
         void AquaLogicProto::SendCommand(const uint16_t type, const enum CONTROLLER_KEYS key, const uint8_t action, const uint8_t wired_key_bytes)

@@ -176,8 +176,8 @@ namespace esphome
 
       char line1_original[21] = {'\0'};
       char line2_original[21] = {'\0'};
-      bool line1_blink_state[20];
-      bool line2_blink_state[20];
+      bool line1_blink_state[20] = {false};
+      bool line2_blink_state[20] = {false};
     };
 
     struct pump_state_t
