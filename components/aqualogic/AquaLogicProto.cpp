@@ -801,6 +801,8 @@ namespace esphome
                 return "AUX_13";
             case KEY_AUX_14:
                 return "AUX_14";
+            case KEY_SUPER_CHLORINATE:
+                return "SUPER_CHLORINATE";
             default:
                 return "UNKNOWN";
             }
@@ -850,7 +852,7 @@ namespace esphome
                 KEY_AUX_1, KEY_AUX_2, KEY_AUX_3, KEY_AUX_4, KEY_AUX_5,
                 KEY_AUX_6, KEY_AUX_7, KEY_VALVE_3, KEY_VALVE_4, KEY_HEATER_1,
                 KEY_AUX_8, KEY_AUX_9, KEY_AUX_10, KEY_AUX_11, KEY_AUX_12,
-                KEY_AUX_13, KEY_AUX_14
+                KEY_AUX_13, KEY_AUX_14, KEY_SUPER_CHLORINATE
             };
 
             for (CONTROLLER_KEYS key : ALL_KEYS)

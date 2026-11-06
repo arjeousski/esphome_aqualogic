@@ -60,6 +60,7 @@ AquaLogicKeys = {
     "AUX_13" : AquaLogicControllerKeys.KEY_AUX_13,    
     "AUX_14" : AquaLogicControllerKeys.KEY_AUX_14,    
     "UNLOCK" : AquaLogicControllerKeys.KEY_UNLOCK,
+    "SUPER_CHLORINATE" : AquaLogicControllerKeys.KEY_SUPER_CHLORINATE,
 }
 
 CONF_WIRED_KEY_BYTES = "wired_key_bytes"

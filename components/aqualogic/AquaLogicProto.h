@@ -164,7 +164,8 @@ namespace esphome
       KEY_AUX_11    = 0x00400000,
       KEY_AUX_12    = 0x00800000,
       KEY_AUX_13    = 0x01000000,
-      KEY_AUX_14    = 0x02000000
+      KEY_AUX_14    = 0x02000000,
+      KEY_SUPER_CHLORINATE = 0x04000000
     };
 
     struct display_state_t

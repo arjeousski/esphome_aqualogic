@@ -25,7 +25,8 @@ const std::unordered_map<CONTROLLER_KEYS, CONTROLLER_FLAGS> AquaLogicComponent::
     {KEY_AUX_11, AUX_11},
     {KEY_AUX_12, AUX_12},
     {KEY_AUX_13, AUX_13},
-    {KEY_AUX_14, AUX_14}
+    {KEY_AUX_14, AUX_14},
+    {KEY_SUPER_CHLORINATE, SUPER_CHLORINATE}
 };
 
 #ifdef USE_BINARY_SENSOR

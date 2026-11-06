@@ -252,6 +252,7 @@ These keys can be passed as the `key` argument to either `aqualogic.send` or `aq
 | `SERVICE` | `KEY_SERVICE` | `LOCAL_WIRED`, `REMOTE_WIRED`, `WIRELESS`, `WIRELESS2` (Default) | Send Only | Service button (on panel) |
 | `AUX_1` - `AUX_7` | `KEY_AUX_1` - `KEY_AUX_7` | `LOCAL_WIRED`, `REMOTE_WIRED`, `WIRELESS`, `WIRELESS2` (Default) | Send & Toggle | Aux 1 to Aux 7 buttons |
 | `AUX_8` - `AUX_14` | `KEY_AUX_8` - `KEY_AUX_14` | `WIRELESS`, `WIRELESS2` (Default) | Send & Toggle | Aux 8 to Aux 14 buttons |
+| `SUPER_CHLORINATE` | `KEY_SUPER_CHLORINATE` | `WIRELESS`, `WIRELESS2` (Default) | Send & Toggle | Super chlorination button |
 
 ### 2. Available States (Flags)
 These boolean flags are broadcasted by the controller. Any of these flags can be:
@@ -291,6 +292,7 @@ For keys that support state confirmation, the retry mechanism monitors the corre
 | `VALVE_4` | `VALVE_4` | Verifies Valve 4 status changed |
 | `HEATER_1` | `HEATER_AUTO` | Verifies Heater Auto state changed |
 | `AUX_1` - `AUX_14` | `AUX_1` - `AUX_14` | Verifies corresponding Aux status changed |
+| `SUPER_CHLORINATE` | `SUPER_CHLORINATE` | Verifies Super Chlorinate state changed |
 
 ---
 
